@@ -49,8 +49,58 @@ npm install
 npm install gsap html2canvas jspdf three
 
 # Iniciar desarrollo
-npm run dev
+pnpm run dev
 ```
+
+## 📦 Build para Producción
+
+**IMPORTANTE:** La carpeta `dist/` NO está incluida en el repositorio por seguridad (contiene variables de entorno compiladas).
+
+### Generar Build:
+
+```bash
+# 1. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus API keys reales
+
+# 2. Generar build
+pnpm run build
+
+# La carpeta dist/ se creará con:
+# - HTML minificado
+# - JavaScript optimizado y comprimido
+# - CSS procesado
+# - Assets optimizados
+```
+
+### Desplegar:
+
+```bash
+# Opción 1: Servidor estático
+cd dist
+python -m http.server 8080
+
+# Opción 2: Vercel/Netlify
+# Conecta tu repo y despliega automáticamente
+# Build command: pnpm run build
+# Output directory: dist
+```
+
+### Modo Mantenimiento:
+
+El sitio incluye un sistema de protección con contraseña:
+
+```bash
+# .env
+VITE_MAINTENANCE_MODE=true  # Requiere contraseña: vibratickets2025
+VITE_MAINTENANCE_MODE=false # Acceso libre
+```
+
+**Contraseña por defecto:** `vibratickets2025`
+
+Para cambiar la contraseña, edita `src/components/MaintenanceLogin.jsx`
+
+Ver documentación completa en `MODO_MANTENIMIENTO.md`
 
 ## 📁 Estructura del Proyecto
 
