@@ -1,0 +1,46 @@
+.guest-checkout-form {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.guest-checkout-form .ant-card-head {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.guest-checkout-form .ant-card-head-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.guest-checkout-form .ant-form-item-label > label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.guest-checkout-form .ant-input-affix-wrapper,
+.guest-checkout-form .ant-input {
+  border-radius: 8px;
+}
+
+.guest-checkout-form .ant-btn-primary {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.guest-checkout-form .ant-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.guest-checkout-form .ant-alert {
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .guest-checkout-form .ant-card-head-title {
+    font-size: 18px;
+  }
+}

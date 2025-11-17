@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        .info { background: #e3f2fd; color: #1565c0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Frontend API</h1>
+    <button onclick="testDirectFetch()">Test Direct Fetch</button>
+    <button onclick="testApiClient()">Test API Client</button>
+    <button onclick="testEventsApi()">Test Events API</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <div id="logs"></div>
+
+    <script type="module">
+        // Simular el entorno del frontend
+        const API_BASE_URL = 'http://localhost:3000';
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            logsDiv.appendChild(logDiv);
+            console.log(message);
+        }
+
+        // API Client simulado
+        class ApiClient {
+            constructor() {
+                this.baseURL = API_BASE_URL;
+            }
+
+            async request(endpoint, config = {}) {
+                const url = `${this.baseURL}${endpoint}`;
+                log(`🌐 Haciendo request a: ${url}`, 'info');
+                
+                try {
+                    const response = await fetch(url, {
+                        ...config,
+                        headers: {
+                            ...config.headers
+                        }
+                    });
+                    
+                    log(`📊 Status: ${response.status}`, response.ok ? 'success' : 'error');
+                    
+                    if (!response.ok) {
+                        let errorMessage = `HTTP error! status: ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } catch {
+                            // Si no se puede parsear el JSON, usar el mensaje por defecto
+                        }
+                        throw new Error(errorMessage);
+                    }
+
+                    const data = await response.json();
+                    log(`✅ Respuesta recibida: ${JSON.stringify(data, null, 2)}`, 'success');
+                    return data;
+                } catch (error) {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    throw error;
+                }
+            }
+
+            async get(endpoint, params = {}) {
+                const queryString = new URLSearchParams(params).toString();
+                const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+                return this.request(url, { method: 'GET' });
+            }
+        }
+
+        const apiClient = new ApiClient();
+
+        // Events API simulado
+        const eventsApi = {
+            getEvents: (params = {}) => {
+                const { page = 1, limit = 20, search = '', status = 'active', sortBy = 'created_at', sortOrder = 'DESC' } = params;
+                log(`🎭 getEvents llamado con params: ${JSON.stringify(params)}`, 'info');
+                return apiClient.get('/api/events', { page, limit, search, status, sortBy, sortOrder });
+            }
+        };
+
+        // Funciones de test
+        window.testDirectFetch = async function() {
+            log('🧪 Test 1: Direct Fetch', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/events`);
+                const data = await response.json();
+                log(`✅ Direct fetch exitoso: ${data.events?.length || 0} eventos`, 'success');
+            } catch (error) {
+                log(`❌ Direct fetch falló: ${error.message}`, 'error');
+            }
+        };
+
+        window.testApiClient = async function() {
+            log('🧪 Test 2: API Client', 'info');
+            try {
+                const data = await apiClient.get('/api/events');
+                log(`✅ API Client exitoso: ${data.events?.length || 0} eventos`, 'success');
+            } catch (error) {
+                log(`❌ API Client falló: ${error.message}`, 'error');
+            }
+        };
+
+        window.testEventsApi = async function() {
+            log('🧪 Test 3: Events API', 'info');
+            try {
+                const data = await eventsApi.getEvents({
+                    page: 1,
+                    limit: 12,
+                    status: 'active',
+                    sortBy: 'created_at',
+                    sortOrder: 'DESC'
+                });
+                log(`✅ Events API exitoso: ${data.events?.length || 0} eventos`, 'success');
+                
+                // Verificar estructura
+                if (data && data.events) {
+                    log(`📋 Estructura correcta: response.events con ${data.events.length} elementos`, 'success');
+                    log(`📋 Primer evento: ${JSON.stringify(data.events[0], null, 2)}`, 'info');
+                } else if (data && Array.isArray(data)) {
+                    log(`📋 Es array directo con ${data.length} elementos`, 'info');
+                } else {
+                    log(`❌ Estructura inesperada: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Events API falló: ${error.message}`, 'error');
+            }
+        };
+
+        window.clearLogs = function() {
+            document.getElementById('logs').innerHTML = '';
+        };
+
+        // Auto-ejecutar test al cargar
+        log('🚀 Debug Frontend cargado. Haz clic en los botones para probar.', 'info');
+    </script>
+</body>
+</html>

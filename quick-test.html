@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick API Test</title>
+</head>
+<body>
+    <h1>Quick API Test</h1>
+    <button onclick="testHold()">Test Hold Creation</button>
+    <div id="result"></div>
+
+    <script>
+        async function testHold() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const holdData = {
+                    showId: 1,  // Show 1 tiene asientos disponibles
+                    seatIds: [801, 802],  // IDs de asientos reales del show 1
+                    customerEmail: 'test@example.com',
+                    customerName: 'Test User'
+                };
+
+                console.log('Sending data:', holdData);
+                console.log('JSON string:', JSON.stringify(holdData));
+
+                const response = await fetch('http://localhost:3000/api/holds', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': 'hold-test-' + Date.now()
+                    },
+                    body: JSON.stringify(holdData)
+                });
+
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('Response data:', result);
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<p style="color: green;">✅ Success: ${JSON.stringify(result)}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">❌ Error: ${result.message || result.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">❌ Network Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

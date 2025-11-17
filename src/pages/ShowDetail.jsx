@@ -1,0 +1,623 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty } from 'antd';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
+import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
+import { showsApi, eventsApi, holdsApi } from '../services/apiService';
+import { useAuth } from '../hooks/useAuth';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { getEventBannerUrl } from '../utils/imageUtils';
+
+const { Title, Text } = Typography;
+
+// Componente para el selector de cantidad
+const QuantitySelector = ({ value, onChange, max, disabled = false }) => (
+  <Space>
+    <Button 
+      shape="circle" 
+      icon={<MinusOutlined />} 
+      onClick={() => onChange(Math.max(0, value - 1))} 
+      disabled={disabled || value === 0} 
+    />
+    <Text style={{ fontSize: '1.1rem', fontWeight: 'bold', minWidth: 30, textAlign: 'center' }}>{value}</Text>
+    <Button 
+      shape="circle" 
+      icon={<PlusOutlined />} 
+      onClick={() => onChange(Math.min(max, value + 1))} 
+      disabled={disabled || value >= max || max === 0} 
+    />
+  </Space>
+);
+
+export default function ShowDetail() {
+  const { showId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const [show, setShow] = useState(null);
+  const [event, setEvent] = useState(null);
+  const [sections, setSections] = useState([]); // Secciones del show
+  const [seats, setSeats] = useState([]); // Asientos disponibles del show
+  const [loading, setLoading] = useState(true);
+  const [creatingHold, setCreatingHold] = useState(false); // Loading al crear hold
+  const [error, setError] = useState(null);
+  const [sectionQuantities, setSectionQuantities] = useState({}); // Cantidades por sección
+  const [accessToken, setAccessToken] = useState(null); // Token de acceso de la cola
+  const [hasValidAccess, setHasValidAccess] = useState(false); // Si tiene acceso válido
+
+  // Función para recargar asientos (reutilizable)
+  // IMPORTANTE: Retorna los asientos para uso inmediato (no esperar state update)
+  const loadSeats = async () => {
+    try {
+      // 🚧 WORKAROUND: Obtener tickets del show para filtrar asientos vendidos
+      let soldSeatIds = [];
+      try {
+        const ticketsResponse = await showsApi.getShowTickets(showId);
+        const ticketsList = Array.isArray(ticketsResponse) 
+          ? ticketsResponse 
+          : (ticketsResponse?.tickets || ticketsResponse?.data || []);
+        
+        // Extraer seat_ids de los tickets
+        soldSeatIds = ticketsList
+          .map(ticket => ticket.seat_id || ticket.seatId)
+          .filter(Boolean); // Remover nulls/undefined
+        
+      } catch (ticketsError) {
+        // Continuar sin el filtro de tickets
+      }
+      
+      const seatsResponse = await showsApi.getShowSeats(showId);
+      const seatsList = Array.isArray(seatsResponse) 
+        ? seatsResponse 
+        : (seatsResponse?.seats || seatsResponse?.data || []);
+      
+      // 🔍 LOG DETALLADO: Ver status de los primeros 10 asientos
+      seatsList.slice(0, 10).forEach(seat => {
+        const hasSold = soldSeatIds.includes(seat.id);
+      });
+      
+      // Filtrar asientos: AVAILABLE + NO tienen ticket asociado
+      const availableSeats = seatsList.filter(seat => {
+        const isAvailable = seat.status === 'AVAILABLE';
+        const hasSoldTicket = soldSeatIds.includes(seat.id);
+        
+        // 🚧 WORKAROUND: Excluir asientos con tickets aunque status sea AVAILABLE
+        if (hasSoldTicket) {
+          return false; // No disponible - tiene ticket
+        }
+        
+        return isAvailable;
+      });
+      
+      // Mostrar IDs de asientos disponibles
+      
+      // 🚨 VERIFICACIÓN CRÍTICA: ¿Los asientos 1 y 2 están en disponibles?
+      const hasOne = availableSeats.some(s => String(s.id) === '1');
+      const hasTwo = availableSeats.some(s => String(s.id) === '2');
+      if (hasOne || hasTwo) {
+        console.error('🚨 ERROR: Asientos 1 o 2 aún en la lista de disponibles!');
+        console.error('  - Asiento 1 disponible:', hasOne);
+        console.error('  - Asiento 2 disponible:', hasTwo);
+        console.error('  - soldSeatIds:', soldSeatIds);
+      }
+      
+      if (availableSeats.length === 0) {
+        message.warning('No hay asientos disponibles en este momento. Pueden estar reservados por otros usuarios.');
+      }
+      
+      setSeats(availableSeats);
+      
+      // ⭐ IMPORTANTE: Retornar los asientos para uso inmediato
+      return availableSeats;
+    } catch (seatsError) {
+      console.error('❌ Error al cargar asientos:', seatsError);
+      setSeats([]);
+      return [];
+    }
+  };
+
+  // useEffect para validar accessToken de la cola virtual
+  useEffect(() => {
+    // 1. Intentar obtener accessToken del state (recién llegado de Queue)
+    let token = location.state?.accessToken;
+    
+    // 2. Si no está en state, intentar de sessionStorage
+    if (!token) {
+      token = sessionStorage.getItem(`queue-access-${showId}`);
+      } else {
+      }
+    
+    // 3. Verificar si el token está expirado
+    if (token) {
+      const expiresAt = location.state?.expiresAt || sessionStorage.getItem(`queue-access-${showId}-expires`);
+      
+      if (expiresAt) {
+        const expirationDate = new Date(expiresAt);
+        const now = new Date();
+        
+        if (now > expirationDate) {
+          sessionStorage.removeItem(`queue-access-${showId}`);
+          sessionStorage.removeItem(`queue-access-${showId}-expires`);
+          message.warning('Tu acceso ha expirado. Volvé a la cola para comprar entradas.');
+          setTimeout(() => {
+            navigate(`/queue/${showId}`);
+          }, 2000);
+          return;
+        }
+      }
+      
+      setAccessToken(token);
+      setHasValidAccess(true);
+    } else {
+      message.info('Debés pasar por la cola virtual para comprar entradas. Redirigiendo...');
+      setTimeout(() => {
+        navigate(`/queue/${showId}`);
+      }, 2000);
+    }
+  }, [showId, location, navigate]);
+
+  useEffect(() => {
+    // Solo cargar datos si tiene acceso válido
+    if (!hasValidAccess) {
+      return;
+    }
+    
+    const loadShowData = async () => {
+      try {
+        setLoading(true);
+        // 1. Cargar datos del show
+        const showResponse = await showsApi.getShow(showId);
+        setShow(showResponse);
+
+        const eventId = showResponse.eventId || showResponse.event_id;
+        
+        if (eventId) {
+          // 2. Cargar datos del evento
+          const eventResponse = await eventsApi.getEvent(eventId);
+          setEvent(eventResponse);
+        }
+
+        // 3. Cargar SECCIONES del SHOW
+        try {
+          const sectionsResponse = await showsApi.getShowSections(showId);
+          const sectionsList = Array.isArray(sectionsResponse) 
+            ? sectionsResponse 
+            : (sectionsResponse?.sections || sectionsResponse?.data || []);
+          
+          if (sectionsList.length > 0) {
+            setSections(sectionsList);
+            
+            // Intentar recuperar cantidades previas de sessionStorage
+            const savedQuantities = sessionStorage.getItem(`show-${showId}-quantities`);
+            
+            if (savedQuantities) {
+              try {
+                const parsed = JSON.parse(savedQuantities);
+                setSectionQuantities(parsed);
+                message.info('Se recuperaron tus selecciones anteriores', 3);
+              } catch (e) {
+                console.error('Error al parsear cantidades guardadas:', e);
+                // Inicializar en 0 si falla
+                const initialQuantities = sectionsList.reduce((acc, section) => ({ 
+                  ...acc, 
+                  [String(section.id)]: 0 
+                }), {});
+                setSectionQuantities(initialQuantities);
+              }
+            } else {
+              // Inicializar cantidades en 0 - normalizar IDs a string
+              const initialQuantities = sectionsList.reduce((acc, section) => ({ 
+                ...acc, 
+                [String(section.id)]: 0 
+              }), {});
+              setSectionQuantities(initialQuantities);
+            }
+          } else {
+            message.warning('Este show no tiene secciones configuradas. Contactá al organizador.');
+          }
+        } catch (sectionsError) {
+          console.error('❌ Error al cargar secciones:', sectionsError);
+          message.error('No se pudieron cargar las secciones del show.');
+        }
+
+        // 4. Cargar ASIENTOS disponibles del SHOW
+        await loadSeats();
+      } catch (err) {
+        console.error('❌ Error al cargar datos del show:', err);
+        setError(err.message || 'Error al cargar datos');
+        message.error('No se pudo cargar la información del show.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (showId && hasValidAccess) loadShowData();
+  }, [showId, hasValidAccess]);
+
+  const handleQuantityChange = (sectionId, newQuantity) => {
+    // Normalizar sectionId a string para consistencia
+    const normalizedId = String(sectionId);
+    setSectionQuantities(prev => {
+      const updated = { ...prev, [normalizedId]: newQuantity };
+      
+      // Guardar en sessionStorage para preservar al navegar
+      sessionStorage.setItem(`show-${showId}-quantities`, JSON.stringify(updated));
+      
+      return updated;
+    });
+  };
+
+  const handleClearSelections = () => {
+    const initialQuantities = sections.reduce((acc, section) => ({ 
+      ...acc, 
+      [String(section.id)]: 0 
+    }), {});
+    setSectionQuantities(initialQuantities);
+    sessionStorage.removeItem(`show-${showId}-quantities`);
+    message.success('Selecciones limpiadas');
+  };
+
+  const { totalTickets, totalPrice } = useMemo(() => {
+    let totalTickets = 0;
+    let totalPrice = 0;
+    for (const sectionId in sectionQuantities) {
+      const quantity = sectionQuantities[sectionId];
+      if (quantity > 0) {
+        // Comparación flexible: convertir ambos a string para comparar
+        const section = sections.find(s => String(s.id) === String(sectionId));
+        if (section) {
+          totalTickets += quantity;
+          // price_cents o priceCents dependiendo del backend
+          const priceInCents = section.price_cents || section.priceCents || 0;
+          totalPrice += quantity * (priceInCents / 100);
+        } else {
+          console.error(`  ❌ NO SE ENCONTRÓ la sección con ID ${sectionId}`);
+          console.error(`  📋 IDs disponibles en sections:`, sections.map(s => `${s.id} (${typeof s.id})`));
+        }
+      }
+    }
+    
+    return { totalTickets, totalPrice };
+  }, [sectionQuantities, sections]);
+
+  const handleContinue = async () => {
+    if (totalTickets === 0) {
+      message.warning('Debes seleccionar al menos una entrada.');
+      return;
+    }
+
+    // Validar que el usuario esté autenticado
+    if (!user || !user.email) {
+      message.error('Debes iniciar sesión para continuar con la compra.');
+      navigate('/login', { state: { from: `/shows/${showId}` } });
+      return;
+    }
+    
+    try {
+      setCreatingHold(true);
+      
+      // 1. Obtener secciones seleccionadas con cantidades
+      const selectedSections = Object.entries(sectionQuantities)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([sectionId, quantity]) => {
+          // Comparación flexible: string vs number
+          const section = sections.find(s => String(s.id) === String(sectionId));
+          
+          if (!section) {
+            console.error(`❌ No se encontró la sección con ID: ${sectionId}`);
+            console.error(`❌ IDs disponibles:`, sections.map(s => s.id));
+          }
+          
+          // Usar el campo correcto para el nombre
+          const sectionName = section?.name || section?.sector || `Sección ${sectionId}`;
+          
+          return {
+            sectionId: parseInt(sectionId),
+            sectionName,
+            quantity,
+            section // ⭐ Incluir el objeto completo para referencia
+          };
+        });
+
+      // Recargar asientos para asegurar disponibilidad en tiempo real
+      const freshSeats = await loadSeats();
+      
+      // Verificar si hay asientos cargados
+      if (!freshSeats || freshSeats.length === 0) {
+        console.error('❌ No hay asientos disponibles en el sistema');
+        message.error('No hay asientos disponibles para este show. Pueden estar reservados por otros usuarios.');
+        setCreatingHold(false);
+        return;
+      }
+
+      // Log de todos los sectores únicos disponibles
+      const uniqueSectors = [...new Set(freshSeats.map(s => s.sector))];
+      // 2. Asignar asientos específicos de cada sección
+      const selectedSeatIds = [];
+      
+      for (const selection of selectedSections) {
+        // Validar que tenemos un sectionName válido
+        if (!selection.sectionName || typeof selection.sectionName !== 'string' || selection.sectionName.trim() === '') {
+          console.error(`❌ Sección sin nombre válido:`, selection);
+          message.error(`Error: No se pudo identificar la sección seleccionada (ID: ${selection.sectionId})`);
+          setCreatingHold(false);
+          return;
+        }
+        
+        // Buscar asientos disponibles de esta sección
+        // ⭐ USAR freshSeats (recién cargados) en lugar de seats (estado viejo)
+        const sectionSeats = freshSeats.filter(seat => {
+          const matchesSector = seat.sector === selection.sectionName;
+          const isAvailable = seat.status === 'AVAILABLE';
+          
+          // Log detallado de cada asiento
+          if (seat.status === 'AVAILABLE') {
+            }
+          
+          return matchesSector && isAvailable;
+        });
+        
+        if (sectionSeats.length < selection.quantity) {
+          message.error(`No hay suficientes asientos disponibles en ${selection.sectionName}. Disponibles: ${sectionSeats.length}, Solicitados: ${selection.quantity}`);
+          setCreatingHold(false);
+          return;
+        }
+        
+        // Tomar los primeros N asientos disponibles
+        const seatsToReserve = sectionSeats.slice(0, selection.quantity);
+        selectedSeatIds.push(...seatsToReserve.map(seat => seat.id));
+      }
+
+      
+      // Verificar que se seleccionaron asientos
+      if (selectedSeatIds.length === 0) {
+        console.error('❌ No se pudieron asignar asientos');
+        message.error('No se pudieron asignar asientos. Por favor, intentá nuevamente o contactá al organizador.');
+        setCreatingHold(false);
+        return;
+      }
+
+      // 3. Validar que tenemos accessToken válido
+      if (!accessToken) {
+        console.error('❌ No hay accessToken válido');
+        message.error('Tu acceso ha expirado. Volvé a la cola virtual.');
+        setTimeout(() => {
+          navigate(`/queue/${showId}`);
+        }, 2000);
+        setCreatingHold(false);
+        return;
+      }
+
+      // 4. Crear HOLD (reserva temporal de 15 minutos) con accessToken
+      const holdData = {
+        showId: parseInt(showId),
+        seatIds: selectedSeatIds,
+        customerEmail: user.email,
+        customerName: user.name || user.email.split('@')[0],
+        accessToken: accessToken // 🔐 Token de acceso de la cola virtual
+      };
+
+      // Log con token ofuscado (opcional para debug)
+      console.log('🧾 Creando HOLD con tokens ocultos', {
+        ...holdData,
+        accessToken: '***' + accessToken.slice(-8)
+      });
+      const holdResponse = await holdsApi.createHold(holdData);
+      message.success(`¡Asientos reservados! Tenés ${holdResponse.ttlMinutes || 15} minutos para completar la compra.`, 5);
+
+      // 5. Navegar a checkout con el holdId
+      navigate(`/checkout/${holdResponse.holdId}`, { 
+        state: { 
+          holdId: holdResponse.holdId,
+          holdData: holdResponse,
+          show,
+          event,
+          expiresAt: holdResponse.expiresAt
+        } 
+      });
+      // NO limpiar sessionStorage aquí - se limpiará después del pago exitoso
+
+    } catch (error) {
+      console.error('❌ Error al crear hold:', error);
+      console.error('❌ Detalles completos del error:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        data: error.data,
+        url: error.url,
+        method: error.method,
+        stack: error.stack
+      });
+ // Manejar errores de disponibilidad (409 Conflict)
+      if (error.status === 409 || error.message?.includes('409') || error.message?.includes('conflict')) {
+        console.error('❌ Conflicto 409 detectado');
+        
+        // Intentar parsear los asientos no disponibles del backend
+        let unavailableInfo = '';
+        if (error.response?.unavailableSeats || error.data?.unavailableSeats) {
+          const unavailableSeats = error.response?.unavailableSeats || error.data?.unavailableSeats;
+          // Crear mensaje detallado
+          const seatsList = unavailableSeats.map(seat => {
+            const reason = seat.reason === 'sold' ? 'vendido' : 
+                          seat.reason === 'held' ? 'reservado por otro usuario' : 
+                          seat.reason || 'no disponible';
+            return `${seat.seatNumber} (${reason})`;
+          }).join(', ');
+          
+          unavailableInfo = `\n\nAsientos no disponibles: ${seatsList}`;
+        }
+        
+        if (error.message?.includes('HoldAlreadyExists')) {
+          message.warning('Ya tenés una reserva activa. Continuá con el pago antes de hacer una nueva.');
+        } else {
+          message.error({
+            content: `Los asientos ya no están disponibles. Por favor, reintentá con otros asientos.${unavailableInfo}`,
+            duration: 8
+          });
+        }
+        // Recargar asientos disponibles
+        await loadSeats();
+        
+      } else if (error.message?.includes('Backend no disponible')) {
+        message.error('No se pudo conectar con el servidor. Verificá que el backend esté corriendo.');
+      } else if (error.message?.includes('SeatsNotAvailable') || error.message?.includes('not available')) {
+        message.error('Algunos asientos ya no están disponibles. Recargando...');
+        // Recargar asientos para reflejar el estado actual
+        await loadSeats();
+      } else if (error.message?.includes('BadRequest') || error.status === 400) {
+        message.error('Datos inválidos. Por favor, intentá nuevamente.');
+      } else if (error.message?.includes('404') || error.status === 404) {
+        message.error('Endpoint no encontrado. El backend no tiene implementado POST /api/holds');
+      } else if (error.message?.includes('500') || error.status === 500) {
+        message.error('Error interno del servidor. Verificá los logs del backend.');
+      } else {
+        message.error('Error al reservar asientos: ' + error.message);
+        // Recargar asientos para reflejar el estado actual
+        await loadSeats();
+      }
+    } finally {
+      setCreatingHold(false);
+    }
+  };
+
+  if (loading) return <div style={{ minHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Spin size="large" /></div>;
+  if (error) return <div style={{ padding: 40, textAlign: 'center' }}><Text type="danger">Error: {error}</Text></div>;
+  if (!show || !event) return <div style={{ padding: 40, textAlign: 'center' }}><Empty description="No se encontró el show." /></div>;
+
+  const showDate = new Date(show.startsAt || show.starts_at);
+  const eventId = show.eventId || show.event_id;
+
+  return (
+    <div style={{ background: '#F9FAFB', paddingBottom: '120px' /* Espacio para el footer fijo */ }}>
+      {/* Hero Section */}
+      <div style={{ 
+        height: 250,
+        background: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.4)), url(${
+event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1200&h=600&fit=crop'
+        })`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex', alignItems: 'flex-end', padding: '24px'
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', color: 'white' }}>
+          <Breadcrumb separator={<span style={{ color: 'rgba(255,255,255,0.7)' }}>/</span>}>
+            <Breadcrumb.Item><Link to="/" style={{ color: 'white' }}>Inicio</Link></Breadcrumb.Item>
+            <Breadcrumb.Item><Link to={`/events/${eventId}`} style={{ color: 'white' }}>{event.name}</Link></Breadcrumb.Item>
+            <Breadcrumb.Item>Entradas</Breadcrumb.Item>
+          </Breadcrumb>
+          <Title level={1} style={{ color: 'white', marginTop: 8, marginBottom: 8 }}>{event.name}</Title>
+          <Space wrap size="large">
+            <Text style={{ color: 'white' }}><CalendarOutlined /> {format(showDate, "dd 'de' MMMM, yyyy", { locale: es })}</Text>
+            <Text style={{ color: 'white' }}><ClockCircleOutlined /> {format(showDate, "HH:mm 'hs'", { locale: es })}</Text>
+            <Text style={{ color: 'white' }}><EnvironmentOutlined /> {event.venue_name}</Text>
+          </Space>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 900, margin: '-60px auto 0', position: 'relative', zIndex: 10, padding: '0 24px' }}>
+        <Card 
+          style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
+          extra={totalTickets > 0 && (
+            <Button 
+              type="text" 
+              onClick={handleClearSelections}
+              style={{ color: '#999' }}
+            >
+              Limpiar selecciones
+            </Button>
+          )}
+        >
+          <Title level={3} style={{ marginBottom: 24 }}>Seleccioná tus entradas</Title>
+          
+          {sections.length > 0 ? (
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              {sections.map(section => (
+                <React.Fragment key={section.id}>
+                  <Row align="middle" justify="space-between">
+                    <Col xs={24} sm={12}>
+                      <Title level={5} style={{ margin: 0 }}>{section.name}</Title>
+                      {(() => {
+                        // Contar asientos disponibles reales de esta sección
+                        const availableCount = seats.filter(seat => 
+                          seat.sector === section.name && 
+                          seat.status === 'AVAILABLE'
+                        ).length;
+                        
+                        return (
+                          <>
+                            <Text type="secondary">Disponibles: {availableCount} de {section.capacity} lugares</Text>
+                            {availableCount < section.capacity && (
+                              <Text type="warning" style={{ display: 'block', fontSize: 12 }}>
+                                {section.capacity - availableCount} vendidos/reservados
+                              </Text>
+                            )}
+                          </>
+                        );
+                      })()}
+                      <div style={{ marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Tag color={section.kind === 'SEATED' ? 'purple' : 'cyan'}>
+                          {section.kind === 'SEATED' ? '🪑 Numerada' : '🎫 General'}
+                        </Tag>
+                        {section.capacity !== undefined && (
+                          <Tag color={section.capacity > 50 ? 'green' : section.capacity > 0 ? 'orange' : 'red'}>
+                            {section.capacity > 50 ? `✅ ${section.capacity} disponibles` : 
+                             section.capacity > 0 ? `⚠️ Quedan ${section.capacity}` : 
+                             '❌ Agotado'}
+                          </Tag>
+                        )}
+                      </div>
+                    </Col>
+                    <Col xs={24} sm={12} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '24px' }}>
+                      <Text style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                        ${((section.price_cents || section.priceCents || 0) / 100).toLocaleString('es-AR')}
+                      </Text>
+                      <QuantitySelector 
+                        value={sectionQuantities[String(section.id)] || 0}
+                        onChange={(q) => handleQuantityChange(String(section.id), q)}
+                        max={Math.min(section.capacity || 10, 10)} // Máximo 10 por compra
+                        disabled={section.capacity === 0}
+                      />
+                    </Col>
+                  </Row>
+                  <Divider style={{ margin: '8px 0' }} />
+                </React.Fragment>
+              ))}
+            </Space>
+          ) : (
+            <Empty description="No hay secciones disponibles para este show. Contactá al organizador." />
+          )}
+        </Card>
+      </div>
+
+      {/* Footer Fijo de Compra */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, 
+        background: 'white', padding: '16px 24px', 
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', zIndex: 1000
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Text style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Total: </Text>
+            <Text style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#4F46E5' }}>
+              ${totalPrice.toLocaleString('es-AR')}
+            </Text>
+            <Text style={{ marginLeft: 16, color: '#6B7280' }}>
+              ({totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'})
+            </Text>
+          </div>
+          <Button 
+            type="primary"
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            onClick={handleContinue}
+            disabled={totalTickets === 0 || creatingHold}
+            loading={creatingHold}
+            style={{ borderRadius: 12, fontWeight: 'bold', background: 'linear-gradient(90deg, #4F46E5, #818CF8)' }}
+          >
+            Continuar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

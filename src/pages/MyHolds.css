@@ -1,0 +1,190 @@
+.my-holds-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - 200px);
+}
+
+.holds-header {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.hold-card {
+  height: 100%;
+  transition: all 0.3s;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hold-card.active {
+  border: 2px solid #52c41a;
+}
+
+.hold-card.expired {
+  border: 2px solid #ff4d4f;
+  opacity: 0.8;
+}
+
+.hold-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.hold-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.hold-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.hold-card-body {
+  margin-bottom: 16px;
+}
+
+.hold-card-body p {
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.countdown-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  color: white;
+  text-align: center;
+}
+
+.countdown-timer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  font-family: 'Courier New', monospace;
+}
+
+.countdown-text {
+  letter-spacing: 2px;
+}
+
+.countdown-label {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.seats-info {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.seats-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.seats-list .ant-tag {
+  margin: 0;
+}
+
+.total-section {
+  margin: 16px 0;
+  padding: 12px;
+  background: #e6f7ff;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.total-section h4 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.hold-card-actions {
+  margin-top: 16px;
+}
+
+.expired-message {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.expired-message p {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+}
+
+/* Animación de entrada */
+.hold-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Warning animation para poco tiempo */
+.countdown-timer.warning {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .my-holds-page {
+    padding: 12px;
+  }
+  
+  .holds-header {
+    padding: 16px;
+  }
+  
+  .holds-header h1 {
+    font-size: 22px !important;
+  }
+  
+  .countdown-timer {
+    font-size: 24px;
+  }
+  
+  .total-section h4 {
+    font-size: 20px;
+  }
+}
