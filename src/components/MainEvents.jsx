@@ -122,19 +122,26 @@ export default function MainEvents() {
                 overflow: 'hidden',
                 border: '1px solid #f0f0f0',
                 transition: 'all 0.3s ease',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
+                height: '100%'
               }}
-              bodyStyle={{ padding: '16px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}
+              bodyStyle={{ 
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
               cover={
-                <div style={{ 
-                  position: 'relative', 
-                  width: '100%',
-                  paddingBottom: '100%', // Aspect ratio 1:1 (cuadrado perfecto)
-                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                  overflow: 'hidden'
-                }}>
+                <div 
+                  style={{ 
+                    position: 'relative', 
+                    width: '100%',
+                    paddingBottom: '100%', // Aspect ratio 1:1 CUADRADO
+                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleEventClick(event)}
+                >
                   <img
                     alt={event.name}
                     src={imageUrl}
@@ -145,7 +152,7 @@ export default function MainEvents() {
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover',
-                      transition: 'transform 0.4s ease'
+                      transition: 'transform 0.3s ease'
                     }}
                     onError={(e) => {
                       e.target.style.display = 'none';
@@ -172,80 +179,60 @@ export default function MainEvents() {
                 </div>
               }
             >
-              {/* Información del evento */}
-              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Nombre del evento */}
-                <Title 
-                  level={4} 
-                  style={{ 
-                    margin: 0,
-                    fontSize: '1.1rem',
-                    fontFamily: fontFamily,
-                    color: textColor,
-                    fontWeight: '700',
-                    lineHeight: '1.3',
-                    minHeight: '2.6rem',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
+              {/* Nombre del evento */}
+              <Title 
+                level={4} 
+                style={{ 
+                  margin: 0,
+                  fontSize: '1.1rem',
+                  fontFamily: fontFamily,
+                  color: textColor,
+                  fontWeight: '700',
+                  lineHeight: '1.3',
+                  minHeight: '2.6rem',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handleEventClick(event)}
+              >
+                {event.name}
+              </Title>
+
+              {/* Venue */}
+              {(event.venue_name || event.venue_city) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <EnvironmentOutlined style={{ color: primaryColor, fontSize: '14px' }} />
+                  <Text style={{ 
+                    fontSize: '0.85rem', 
+                    color: '#6b7280',
+                    whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
-                  }}
-                >
-                  {event.name}
-                </Title>
-
-                {/* Venue y ciudad */}
-                {(event.venue_name || event.venue_city) && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <EnvironmentOutlined style={{ color: primaryColor, fontSize: '14px' }} />
-                    <Text style={{ 
-                      fontSize: '0.85rem', 
-                      color: '#6b7280',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {event.venue_name || event.venue_city || 'Venue por confirmar'}
-                    </Text>
-                  </div>
-                )}
-
-                {/* Fecha del último show */}
-                {lastShowDate && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CalendarOutlined style={{ color: primaryColor, fontSize: '14px' }} />
-                    <Text style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                      {lastShowDate.toLocaleDateString('es-AR', { 
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </Text>
-                  </div>
-                )}
-
-                {/* Descripción truncada */}
-                {truncatedDesc && (
-                  <Text 
-                    style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#9ca3af',
-                      lineHeight: '1.4',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      minHeight: '2.2rem'
-                    }}
-                  >
-                    {truncatedDesc}
+                  }}>
+                    {event.venue_name || event.venue_city || 'Venue por confirmar'}
                   </Text>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Botón de acción */}
+              {/* Fecha */}
+              {lastShowDate && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CalendarOutlined style={{ color: primaryColor, fontSize: '14px' }} />
+                  <Text style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                    {lastShowDate.toLocaleDateString('es-AR', { 
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                </div>
+              )}
+
+              {/* Botón */}
               <Button
                 type="primary"
                 block
@@ -253,11 +240,13 @@ export default function MainEvents() {
                 disabled={!hasShows}
                 onClick={() => handleEventClick(event)}
                 style={{
-                  marginTop: '12px',
+                  marginTop: '8px',
                   borderRadius: '8px',
                   fontWeight: '600',
                   height: '42px',
-                  background: hasShows ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` : '#E5E7EB',
+                  background: hasShows 
+                    ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` 
+                    : '#E5E7EB',
                   border: 'none',
                   color: hasShows ? 'white' : '#9CA3AF'
                 }}
