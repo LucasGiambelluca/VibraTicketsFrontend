@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty } from 'antd';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
-import { showsApi, eventsApi, holdsApi } from '../services/apiService';
+import { showsApi, eventsApi, holdsApi, queueApi } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventBannerUrl } from '../utils/imageUtils';
 import VenueSeatingChart from '../components/VenueSeatingChart';
+import VirtualQueue from '../components/VirtualQueue';
 
 const { Title, Text } = Typography;
 
@@ -43,8 +44,8 @@ export default function ShowDetail() {
   const [creatingHold, setCreatingHold] = useState(false); // Loading al crear hold
   const [error, setError] = useState(null);
   const [sectionQuantities, setSectionQuantities] = useState({}); // Cantidades por sección
-  const [accessToken, setAccessToken] = useState(null); // Token de acceso de la cola
-  const [hasValidAccess, setHasValidAccess] = useState(false); // Si tiene acceso válido
+  const [queueEnabled, setQueueEnabled] = useState(false); // Si la cola está habilitada
+  const [hasQueueAccess, setHasQueueAccess] = useState(false); // Si tiene acceso a la cola
 
   // Función para recargar asientos (reutilizable)
   // IMPORTANTE: Retorna los asientos para uso inmediato (no esperar state update)
@@ -117,55 +118,58 @@ export default function ShowDetail() {
     }
   };
 
-  // useEffect para validar accessToken de la cola virtual
+  // Verificar si la cola está habilitada y si tiene acceso
   useEffect(() => {
-    // 1. Intentar obtener accessToken del state (recién llegado de Queue)
-    let token = location.state?.accessToken;
-    
-    // 2. Si no está en state, intentar de sessionStorage
-    if (!token) {
-      token = sessionStorage.getItem(`queue-access-${showId}`);
-      } else {
-      }
-    
-    // 3. Verificar si el token está expirado
-    if (token) {
-      const expiresAt = location.state?.expiresAt || sessionStorage.getItem(`queue-access-${showId}-expires`);
-      
-      if (expiresAt) {
-        const expirationDate = new Date(expiresAt);
-        const now = new Date();
+    const checkQueueStatus = async () => {
+      try {
+        const response = await queueApi.getStatus(showId);
+        const isQueueOpen = response.data?.isOpen || false;
+        setQueueEnabled(isQueueOpen);
         
-        if (now > expirationDate) {
-          sessionStorage.removeItem(`queue-access-${showId}`);
-          sessionStorage.removeItem(`queue-access-${showId}-expires`);
-          message.warning('Tu acceso ha expirado. Volvé a la cola para comprar entradas.');
-          setTimeout(() => {
-            navigate(`/queue/${showId}`);
-          }, 2000);
-          return;
+        // Verificar si ya tiene un token de acceso guardado
+        const savedToken = localStorage.getItem(`queue_access_${showId}`);
+        const expiresAt = localStorage.getItem(`queue_access_${showId}_expires`);
+        
+        if (savedToken && expiresAt && new Date(expiresAt) > new Date()) {
+          setHasQueueAccess(true);
+        } else if (isQueueOpen) {
+          // Si la cola está abierta pero no tiene acceso, limpiar tokens viejos
+          localStorage.removeItem(`queue_access_${showId}`);
+          localStorage.removeItem(`queue_access_${showId}_expires`);
+          setHasQueueAccess(false);
+        } else {
+          // Si la cola no está habilitada, permitir acceso directo
+          setHasQueueAccess(true);
         }
+      } catch (error) {
+        console.error('Error verificando estado de cola:', error);
+        // En caso de error, permitir acceso (fail-open)
+        setQueueEnabled(false);
+        setHasQueueAccess(true);
       }
-      
-      setAccessToken(token);
-      setHasValidAccess(true);
-    } else {
-      message.info('Debés pasar por la cola virtual para comprar entradas. Redirigiendo...');
-      setTimeout(() => {
-        navigate(`/queue/${showId}`);
-      }, 2000);
+    };
+
+    if (showId) {
+      checkQueueStatus();
     }
-  }, [showId, location, navigate]);
+  }, [showId]);
+
+  // Callback cuando se obtiene acceso de la cola
+  const handleAccessGranted = (accessToken) => {
+    setHasQueueAccess(true);
+    message.success('¡Acceso otorgado! Ya podés seleccionar tus entradas');
+  };
 
   useEffect(() => {
     // Solo cargar datos si tiene acceso válido
-    if (!hasValidAccess) {
+    if (!hasQueueAccess) {
       return;
     }
     
     const loadShowData = async () => {
       try {
         setLoading(true);
+        setError(null);
         // 1. Cargar datos del show
         const showResponse = await showsApi.getShow(showId);
         setShow(showResponse);
@@ -377,25 +381,33 @@ export default function ShowDetail() {
         return;
       }
 
-      // 3. Validar que tenemos accessToken válido
-      if (!accessToken) {
-        console.error('❌ No hay accessToken válido');
-        message.error('Tu acceso ha expirado. Volvé a la cola virtual.');
-        setTimeout(() => {
-          navigate(`/queue/${showId}`);
-        }, 2000);
-        setCreatingHold(false);
-        return;
+      // 3. Obtener accessToken si la cola está habilitada
+      let accessToken = null;
+      if (queueEnabled) {
+        accessToken = localStorage.getItem(`queue_access_${showId}`);
+        const expiresAt = localStorage.getItem(`queue_access_${showId}_expires`);
+        
+        if (!accessToken || !expiresAt || new Date(expiresAt) < new Date()) {
+          console.error('❌ No hay accessToken válido o ha expirado');
+          message.error('Tu acceso ha expirado. Debes unirte a la cola nuevamente.');
+          setHasQueueAccess(false);
+          setCreatingHold(false);
+          return;
+        }
       }
 
-      // 4. Crear HOLD (reserva temporal de 15 minutos) con accessToken
+      // 4. Crear HOLD (reserva temporal de 15 minutos) con accessToken si aplica
       const holdData = {
         showId: parseInt(showId),
         seatIds: selectedSeatIds,
         customerEmail: user.email,
-        customerName: user.name || user.email.split('@')[0],
-        accessToken: accessToken // 🔐 Token de acceso de la cola virtual
+        customerName: user.name || user.email.split('@')[0]
       };
+      
+      // Solo agregar accessToken si la cola está habilitada
+      if (queueEnabled && accessToken) {
+        holdData.accessToken = accessToken; // 🔐 Token de acceso de la cola virtual
+      }
 
       // Log con token ofuscado (opcional para debug)
       console.log('🧾 Creando HOLD con tokens ocultos', {
@@ -516,13 +528,26 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
 
       {/* Content */}
       <div style={{ maxWidth: 900, margin: '-60px auto 0', position: 'relative', zIndex: 10, padding: '0 24px' }}>
-        <Card 
-          style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
-          extra={totalTickets > 0 && (
-            <Button 
-              type="text" 
-              onClick={handleClearSelections}
-              style={{ color: '#999' }}
+        
+        {/* Mostrar cola si está habilitada y no tiene acceso */}
+        {queueEnabled && !hasQueueAccess && (
+          <div style={{ marginBottom: 24 }}>
+            <VirtualQueue 
+              showId={showId} 
+              onAccessGranted={handleAccessGranted}
+            />
+          </div>
+        )}
+
+        {/* Mostrar secciones solo si tiene acceso o la cola no está habilitada */}
+        {(!queueEnabled || hasQueueAccess) && (
+          <Card 
+            style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
+            extra={totalTickets > 0 && (
+              <Button 
+                type="text" 
+                onClick={handleClearSelections}
+                style={{ color: '#999' }}
             >
               Limpiar selecciones
             </Button>
@@ -616,6 +641,7 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
             <Empty description="No hay secciones disponibles para este show. Contactá al organizador." />
           )}
         </Card>
+        )}
       </div>
 
       {/* Footer Fijo de Compra */}

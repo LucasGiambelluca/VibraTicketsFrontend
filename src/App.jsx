@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { LoginModalProvider } from "./contexts/LoginModalContext";
 import { RegisterModalProvider } from "./contexts/RegisterModalContext";
+import { useQueueCleanup } from "./hooks/useQueueCleanup";
 import LoginModal from "./components/LoginModal";
 import RegisterModal from "./components/RegisterModal";
 import ProtectedRoute, { OrganizerRoute, AdminRoute } from "./components/ProtectedRoute";
@@ -54,6 +55,9 @@ export default function App() {
   const [isMaintenanceAuthenticated, setIsMaintenanceAuthenticated] = useState(
     () => localStorage.getItem('maintenance_auth') === 'true'
   );
+
+  // Limpiar tokens de cola expirados
+  useQueueCleanup();
 
   useEffect(() => {
     checkBackendHealth();

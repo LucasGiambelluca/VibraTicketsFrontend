@@ -284,48 +284,46 @@ export const showsApi = {
   getEventShows: (eventId) => apiClient.get(`${API_BASE}/events/${eventId}/shows`)
 };
 
-// Queue API (Actualizado - userId se toma del JWT automáticamente)
+// ============================================
+// QUEUE API - Sistema de Cola Virtual
+// ============================================
 export const queueApi = {
-  // Unirse a la cola (userInfo es opcional)
-  joinQueue: (showId, userInfo = null) => {
-    const body = userInfo ? { userInfo } : {};
-    return apiClient.post(`${API_BASE}/queue/${showId}/join`, body);
-  },
+  // Unirse a la cola de un show
+  joinQueue: (showId, customerEmail) =>
+    apiClient.post(`${API_BASE}/queue/${showId}/join`, {
+      showId,
+      customerEmail
+    }),
 
-  // Obtener posición en la cola (userId del JWT)
-  getQueuePosition: (showId) => {
-    return apiClient.get(`${API_BASE}/queue/${showId}/position`);
-  },
+  // Obtener posición actual en la cola
+  getPosition: (showId) =>
+    apiClient.get(`${API_BASE}/queue/${showId}/position`),
 
-  // Reclamar acceso cuando estás en posición 1 (autenticado)
-  claimAccess: (showId) => {
-    return apiClient.post(`${API_BASE}/queue/${showId}/claim-access`);
-  },
+  // Obtener estado general de la cola (público)
+  getStatus: (showId) =>
+    apiClient.get(`${API_BASE}/queue/${showId}/status`),
 
-  // 🆕 Verificar estado del usuario en la cola (requiere auth)
-  getMyStatus: (showId) => {
-    return apiClient.get(`${API_BASE}/queue/${showId}/my-status`);
-  },
+  // Reclamar acceso cuando estás primero
+  claimAccess: (showId) =>
+    apiClient.post(`${API_BASE}/queue/${showId}/claim-access`, {}),
 
-  // 🆕 Obtener estado público de la cola (no requiere auth)
-  getQueueStatus: (showId) => {
-    return apiClient.get(`${API_BASE}/queue/${showId}/status`);
-  },
+  // Salir de la cola
+  leaveQueue: (showId) =>
+    apiClient.delete(`${API_BASE}/queue/${showId}/leave`),
 
-  // Salir de la cola (userId del JWT)
-  leaveQueue: (showId) => {
-    return apiClient.delete(`${API_BASE}/queue/${showId}/leave`);
-  },
+  // Verificar si un token de acceso es válido
+  verifyAccess: (showId, accessToken) =>
+    apiClient.post(`${API_BASE}/queue/${showId}/verify-access`, {
+      accessToken
+    }),
 
   // Procesar siguiente (admin)
-  processNext: (showId) => {
-    return apiClient.post(`${API_BASE}/queue/${showId}/process-next`);
-  },
+  processNext: (showId) =>
+    apiClient.post(`${API_BASE}/queue/${showId}/process-next`),
 
   // Estadísticas (admin)
-  getQueueStats: (showId) => {
-    return apiClient.get(`${API_BASE}/queue/${showId}/stats`);
-  }
+  getQueueStats: (showId) =>
+    apiClient.get(`${API_BASE}/queue/${showId}/stats`)
 };
 
 // ⚠️ DEPRECADO: holdsApi y ordersApi antiguos eliminados

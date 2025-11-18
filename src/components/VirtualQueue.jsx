@@ -1,184 +1,318 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Card, Typography, Progress, Space, Button } from 'antd';
-import { 
-  Scene, 
-  PerspectiveCamera, 
-  WebGLRenderer, 
-  BufferGeometry, 
-  Float32Array as ThreeFloat32Array, 
-  BufferAttribute, 
-  PointsMaterial, 
-  Points, 
-  RingGeometry, 
-  MeshBasicMaterial, 
-  Mesh 
-} from 'three';
-import { gsap } from 'gsap';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Progress, Button, Typography, Space, Spin, Alert, message } from 'antd';
+import { ClockCircleOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { queueApi } from '../services/apiService';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useLoginModal } from '../contexts/LoginModalContext';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
-export default function VirtualQueue({ position, totalUsers, onComplete }) {
-  const mountRef = useRef(null);
-  const sceneRef = useRef(null);
-  const [progress, setProgress] = useState(0);
+const VirtualQueue = ({ showId, onAccessGranted }) => {
+  const { user } = useAuth();
+  const { openLoginModal } = useLoginModal();
+  const navigate = useNavigate();
+  
+  const [queueState, setQueueState] = useState({
+    inQueue: false,
+    position: null,
+    queueSize: 0,
+    estimatedWaitTime: 0,
+    sessionId: null,
+    accessToken: null,
+    loading: false,
+    error: null
+  });
 
-  useEffect(() => {
-    if (!mountRef.current) return;
+  // Polling interval (cada 3 segundos)
+  const POLL_INTERVAL = 3000;
 
-    // Configuración de Three.js
-    const scene = new Scene();
-    const camera = new PerspectiveCamera(75, 400 / 300, 0.1, 1000);
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
-    
-    renderer.setSize(400, 300);
-    renderer.setClearColor(0x000000, 0);
-    mountRef.current.appendChild(renderer.domElement);
-
-    // Crear partículas flotantes
-    const particlesGeometry = new BufferGeometry();
-    const particlesCount = 100;
-    const posArray = new ThreeFloat32Array(particlesCount * 3);
-
-    for (let i = 0; i < particlesCount * 3; i++) {
-      posArray[i] = (Math.random() - 0.5) * 10;
+  // Unirse a la cola
+  const joinQueue = async () => {
+    if (!user) {
+      message.warning('Debes iniciar sesión para unirte a la cola');
+      openLoginModal(() => {
+        // Después del login, intentar unirse automáticamente
+        setTimeout(() => joinQueue(), 500);
+      });
+      return;
     }
 
-    particlesGeometry.setAttribute('position', new BufferAttribute(posArray, 3));
+    setQueueState(prev => ({ ...prev, loading: true, error: null }));
 
-    const particlesMaterial = new PointsMaterial({
-      size: 0.05,
-      color: 0x667eea,
-      transparent: true,
-      opacity: 0.8
-    });
+    try {
+      const response = await queueApi.joinQueue(showId, user.email);
+      
+      setQueueState(prev => ({
+        ...prev,
+        inQueue: true,
+        position: response.data.position,
+        queueSize: response.data.queueSize,
+        estimatedWaitTime: response.data.estimatedWaitTime,
+        sessionId: response.data.sessionId,
+        loading: false
+      }));
 
-    const particlesMesh = new Points(particlesGeometry, particlesMaterial);
-    scene.add(particlesMesh);
+      message.success('Te has unido a la cola virtual');
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Error al unirse a la cola';
+      setQueueState(prev => ({ ...prev, loading: false, error: errorMsg }));
+      message.error(errorMsg);
+    }
+  };
 
-    // Crear línea de progreso 3D
-    const progressGeometry = new RingGeometry(1, 1.2, 32);
-    const progressMaterial = new MeshBasicMaterial({ 
-      color: 0x764ba2,
-      transparent: true,
-      opacity: 0.6
-    });
-    const progressRing = new Mesh(progressGeometry, progressMaterial);
-    scene.add(progressRing);
+  // Actualizar posición en la cola
+  const updatePosition = useCallback(async () => {
+    if (!queueState.inQueue || queueState.accessToken) return;
 
-    camera.position.z = 5;
-    sceneRef.current = { scene, camera, renderer, particlesMesh, progressRing };
+    try {
+      const response = await queueApi.getPosition(showId);
+      
+      setQueueState(prev => ({
+        ...prev,
+        position: response.data.position,
+        queueSize: response.data.queueSize,
+        estimatedWaitTime: response.data.estimatedWaitTime
+      }));
 
-    // Animación
-    const animate = () => {
-      requestAnimationFrame(animate);
-
-      // Rotar partículas
-      particlesMesh.rotation.y += 0.01;
-      particlesMesh.rotation.x += 0.005;
-
-      // Rotar anillo de progreso
-      progressRing.rotation.z += 0.02;
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    // Simular progreso de cola
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        const newProgress = Math.min(prev + Math.random() * 5, 100);
-        
-        // Actualizar color del anillo según progreso
-        const hue = (newProgress / 100) * 0.3; // De rojo a verde
-        progressRing.material.color.setHSL(hue, 0.8, 0.5);
-        
-        if (newProgress >= 100) {
-          clearInterval(progressInterval);
-          setTimeout(() => onComplete && onComplete(), 1000);
-        }
-        
-        return newProgress;
-      });
-    }, 200);
-
-    // Cleanup
-    return () => {
-      clearInterval(progressInterval);
-      if (mountRef.current && renderer.domElement) {
-        mountRef.current.removeChild(renderer.domElement);
+      // Si estamos en posición 1, intentar reclamar acceso
+      if (response.data.position === 1) {
+        await claimAccess();
       }
-      renderer.dispose();
-    };
-  }, [onComplete]);
+    } catch (error) {
+      if (error.response?.data?.error === 'NotInQueue') {
+        setQueueState(prev => ({ ...prev, inQueue: false }));
+      }
+    }
+  }, [showId, queueState.inQueue, queueState.accessToken]);
 
-  return (
-    <Card style={{
-      borderRadius: 16,
-      background: 'rgba(255,255,255,0.95)',
-      backdropFilter: 'blur(10px)',
-      border: 'none',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-      textAlign: 'center'
-    }}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <div>
-          <Title level={3} style={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
-            Cola Virtual
-          </Title>
-          <Text type="secondary">
-            Estás en la posición {position} de {totalUsers} usuarios
-          </Text>
-        </div>
+  // Reclamar acceso
+  const claimAccess = async () => {
+    try {
+      const response = await queueApi.claimAccess(showId);
+      
+      setQueueState(prev => ({
+        ...prev,
+        accessToken: response.data.accessToken,
+        position: 0
+      }));
 
-        {/* Visualización 3D */}
-        <div 
-          ref={mountRef} 
-          style={{ 
-            display: 'flex', 
-            justifyContent: 'center',
-            borderRadius: 12,
-            overflow: 'hidden'
-          }} 
-        />
+      message.success('¡Acceso otorgado! Puedes proceder con tu compra', 5);
 
-        {/* Barra de progreso */}
-        <div style={{ width: '100%' }}>
-          <Progress 
-            percent={progress} 
-            strokeColor={{
-              '0%': '#667eea',
-              '100%': '#52c41a',
+      // Guardar token en localStorage para el checkout
+      localStorage.setItem(`queue_access_${showId}`, response.data.accessToken);
+      localStorage.setItem(`queue_access_${showId}_expires`, response.data.expiresAt);
+
+      // Callback para el componente padre
+      if (onAccessGranted) {
+        onAccessGranted(response.data.accessToken);
+      }
+    } catch (error) {
+      console.error('Error reclamando acceso:', error);
+    }
+  };
+
+  // Salir de la cola
+  const leaveQueue = async () => {
+    try {
+      await queueApi.leaveQueue(showId);
+      
+      setQueueState({
+        inQueue: false,
+        position: null,
+        queueSize: 0,
+        estimatedWaitTime: 0,
+        sessionId: null,
+        accessToken: null,
+        loading: false,
+        error: null
+      });
+
+      message.info('Has salido de la cola');
+    } catch (error) {
+      message.error('Error al salir de la cola');
+    }
+  };
+
+  // Polling automático
+  useEffect(() => {
+    if (!queueState.inQueue || queueState.accessToken) return;
+
+    const interval = setInterval(updatePosition, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [queueState.inQueue, queueState.accessToken, updatePosition]);
+
+  // Formatear tiempo de espera
+  const formatWaitTime = (seconds) => {
+    if (seconds < 60) return `${seconds} segundos`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes} minuto${minutes > 1 ? 's' : ''}`;
+  };
+
+  // Calcular progreso
+  const calculateProgress = () => {
+    if (!queueState.position || !queueState.queueSize) return 0;
+    return Math.round(((queueState.queueSize - queueState.position + 1) / queueState.queueSize) * 100);
+  };
+
+  // Si ya tiene acceso
+  if (queueState.accessToken) {
+    return (
+      <Card
+        style={{
+          maxWidth: 600,
+          margin: '0 auto',
+          borderRadius: 12,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
+          <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
+          
+          <Title level={3} style={{ margin: 0 }}>¡Acceso Otorgado!</Title>
+          
+          <Paragraph>
+            Tienes acceso exclusivo para comprar tus entradas.
+            Este acceso expirará en 15 minutos.
+          </Paragraph>
+
+          <Button
+            type="primary"
+            size="large"
+            onClick={() => {
+              // Scroll hacia las secciones o recargar la página
+              if (onAccessGranted) {
+                onAccessGranted(queueState.accessToken);
+              }
             }}
-            trailColor="#f0f0f0"
-            strokeWidth={8}
-            format={(percent) => `${Math.round(percent)}%`}
-          />
-          <Text style={{ marginTop: 8, display: 'block' }}>
-            Tiempo estimado: {Math.max(1, Math.ceil((100 - progress) / 10))} minutos
-          </Text>
-        </div>
+            style={{ width: '100%' }}
+          >
+            Ver Entradas Disponibles
+          </Button>
+        </Space>
+      </Card>
+    );
+  }
 
-        <div style={{
-          background: '#f8f9fa',
-          padding: 16,
-          borderRadius: 8,
-          textAlign: 'left'
-        }}>
-          <Text strong style={{ display: 'block', marginBottom: 8 }}>
-            Mientras esperas:
-          </Text>
-          <Space direction="vertical" size={4}>
-            <Text>• Mantén esta pestaña abierta</Text>
-            <Text>• No actualices la página</Text>
-            <Text>• Te notificaremos cuando sea tu turno</Text>
+  // Si está en la cola
+  if (queueState.inQueue) {
+    return (
+      <Card
+        style={{
+          maxWidth: 600,
+          margin: '0 auto',
+          borderRadius: 12,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <div style={{ textAlign: 'center' }}>
+            <Title level={3}>Estás en la Cola Virtual</Title>
+            <Text type="secondary">
+              Mantén esta ventana abierta. Te notificaremos cuando sea tu turno.
+            </Text>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <Title level={1} style={{ margin: 0, color: '#1890ff' }}>
+              {queueState.position}
+            </Title>
+            <Text>Tu posición en la cola</Text>
+          </div>
+
+          <Progress
+            percent={calculateProgress()}
+            status="active"
+            strokeColor={{
+              '0%': '#108ee9',
+              '100%': '#87d068',
+            }}
+          />
+
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Space>
+                <UserOutlined />
+                <Text>Personas en cola:</Text>
+              </Space>
+              <Text strong>{queueState.queueSize}</Text>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Space>
+                <ClockCircleOutlined />
+                <Text>Tiempo estimado:</Text>
+              </Space>
+              <Text strong>{formatWaitTime(queueState.estimatedWaitTime)}</Text>
+            </div>
           </Space>
-        </div>
+
+          {queueState.position === 1 && (
+            <Alert
+              message="¡Eres el siguiente!"
+              description="Estamos procesando tu acceso..."
+              type="success"
+              showIcon
+              icon={<Spin />}
+            />
+          )}
+
+          <Button
+            danger
+            block
+            onClick={leaveQueue}
+          >
+            Salir de la Cola
+          </Button>
+        </Space>
+      </Card>
+    );
+  }
+
+  // Estado inicial - No está en la cola
+  return (
+    <Card
+      style={{
+        maxWidth: 600,
+        margin: '0 auto',
+        borderRadius: 12,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+      }}
+    >
+      <Space direction="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
+        <Title level={3}>Cola Virtual Activada</Title>
+        
+        <Paragraph>
+          Este evento tiene alta demanda. Únete a la cola virtual para acceder
+          a la compra de entradas de forma ordenada y segura.
+        </Paragraph>
+
+        {queueState.error && (
+          <Alert
+            message="Error"
+            description={queueState.error}
+            type="error"
+            closable
+            onClose={() => setQueueState(prev => ({ ...prev, error: null }))}
+          />
+        )}
+
+        <Button
+          type="primary"
+          size="large"
+          loading={queueState.loading}
+          onClick={joinQueue}
+          style={{ width: '100%' }}
+        >
+          Unirse a la Cola
+        </Button>
+
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          Al unirte, aceptas esperar tu turno para acceder a la compra
+        </Text>
       </Space>
     </Card>
   );
-}
+};
+
+export default VirtualQueue;
