@@ -379,11 +379,12 @@ export const holdsApi = {
       setTimeout(() => localStorage.removeItem('idem-hold'), 100);
     }
     
-    return apiClient.post(`${API_BASE}/holds`, holdData, {
+    // TEMPORAL: Header comentado hasta que backend configure CORS
+    return apiClient.post(`${API_BASE}/holds`, holdData /*, {
       headers: {
         'Idempotency-Key': idempotencyKey
       }
-    });
+    }*/);
   },
 
   // Consultar HOLD específico
