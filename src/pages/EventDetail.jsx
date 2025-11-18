@@ -439,7 +439,7 @@ export default function EventDetail() {
                                 {isSoldOut ? 'AGOTADO' : 
                                  hasLowSeats ? 'POCAS ENTRADAS' : 'DISPONIBLE'}
                               </Tag>
-                              <Link to={`/queue/${show.id}`}>
+                              <Link to={`/shows/${show.id}`}>
                                 <Button 
                                   type="primary"
                                   disabled={isSoldOut}
