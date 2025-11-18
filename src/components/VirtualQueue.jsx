@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Progress, Button, Typography, Space, Spin, Alert, message } from 'antd';
 import { ClockCircleOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { queueApi } from '../services/apiService';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useLoginModal } from '../contexts/LoginModalContext';
 
