@@ -227,7 +227,6 @@ const CreateEvent = ({ onEventCreated }) => {
         venue_id: '',
         status: 'PUBLISHED'
       });
-      removeImage();
       
       // Limpiar nuevas imágenes
       setEventImages({
