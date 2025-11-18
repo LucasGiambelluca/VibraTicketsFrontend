@@ -16,11 +16,7 @@ const CreateEvent = ({ onEventCreated }) => {
     venue_id: '',
     status: 'PUBLISHED'
   });
-  // Deprecated: antigua imagen única
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  
-  // Nuevo sistema de 4 imágenes
+  // Sistema de 4 imágenes (nuevo sistema oficial)
   const [eventImages, setEventImages] = useState({
     cover_square: null,
     cover_horizontal: null,
@@ -61,41 +57,7 @@ const CreateEvent = ({ onEventCreated }) => {
     }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validar tipo de archivo
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Tipo de archivo no válido. Solo se permiten: JPEG, JPG, PNG, GIF, WEBP');
-        return;
-      }
-      
-      // Validar tamaño (5MB máximo)
-      const maxSize = 5 * 1024 * 1024; // 5MB en bytes
-      if (file.size > maxSize) {
-        setError('La imagen es demasiado grande. Máximo 5MB permitido.');
-        return;
-      }
-      
-      console.log('📸 Archivo seleccionado:', {
-        name: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(2)}MB`,
-        type: file.type
-      });
-      
-      setError(null); // Limpiar errores previos
-      setImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setImage(null);
-    setImagePreview(null);
-  };
+  // Funciones antiguas de imagen única eliminadas - Usar EventImageUpload
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -202,11 +164,7 @@ const CreateEvent = ({ onEventCreated }) => {
         console.log('🏟️ Venue manual:', formData.venue.trim());
       }
       
-      // Imagen (opcional)
-      if (image) {
-        submitData.append('image', image);
-        console.log('🖼️ Imagen adjunta:', image.name);
-      }
+      // Imagen antigua eliminada - Las imágenes nuevas se suben después con EventImageUpload
 
       console.log('📦 Enviando datos al backend...');
       
@@ -228,6 +186,7 @@ const CreateEvent = ({ onEventCreated }) => {
       
       if (eventId && hasNewImages) {
         try {
+          // Crear nuevo FormData para imágenes (separado del submitData)
           const imagesFormData = new FormData();
           let uploadCount = 0;
           
@@ -504,45 +463,7 @@ Error técnico: ${errorMessage}`;
         )}
       </div>
 
-      {/* DEPRECADO: Mantener temporalmente por compatibilidad */}
-      <div style={{ ...formGroupStyle, opacity: 0.5, pointerEvents: 'none', display: 'none' }}>
-        <label htmlFor="image" style={labelStyle}>[DEPRECADO] Imagen del Evento (Sistema Antiguo)</label>
-        <input
-          type="file"
-          id="image"
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-          onChange={handleImageChange}
-          style={inputStyle}
-        />
-        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-          Formatos permitidos: JPEG, JPG, PNG, GIF, WEBP (máximo 5MB)
-        </div>
-        {imagePreview && (
-          <div style={{ marginTop: '12px' }}>
-            <img 
-              src={imagePreview} 
-              alt="Preview" 
-              style={{ maxWidth: '300px', borderRadius: '6px' }} 
-            />
-            <button 
-              type="button" 
-              onClick={removeImage}
-              style={{
-                display: 'block',
-                marginTop: '8px',
-                background: '#dc3545',
-                color: 'white',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Quitar imagen
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Sistema antiguo de imagen única eliminado - Usar EventImageUpload arriba */}
 
       <div style={formGroupStyle}>
         <label htmlFor="startsAt" style={labelStyle}>Fecha y Hora de Inicio *</label>
