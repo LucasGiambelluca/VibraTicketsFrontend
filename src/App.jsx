@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "antd";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { LoginModalProvider } from "./contexts/LoginModalContext";
+import { RegisterModalProvider } from "./contexts/RegisterModalContext";
+import LoginModal from "./components/LoginModal";
+import RegisterModal from "./components/RegisterModal";
 import ProtectedRoute, { OrganizerRoute, AdminRoute } from "./components/ProtectedRoute";
 import ChatbotButton from "./components/ChatbotButton";
 import HeaderNav from "./components/HeaderNav";
@@ -28,6 +32,8 @@ import Privacy from "./pages/Privacy";
 import DatosContacto from "./pages/DatosContacto";
 import DatosLugar from "./pages/DatosLugar";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
+import CustomerLogin from "./pages/CustomerLogin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Soporte from "./pages/Soporte";
@@ -94,13 +100,15 @@ export default function App() {
   // 3. Mostrar la app completa
   return (
     <AuthProvider>
-      <Layout style={{ 
-        minHeight: "100vh", 
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-        display: "flex",
-        flexDirection: "column"
-      }}>
-        <HeaderNav />
+      <LoginModalProvider>
+        <RegisterModalProvider>
+          <Layout style={{ 
+          minHeight: "100vh", 
+          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          <HeaderNav />
         <Content style={{ 
           padding: '0', 
           flex: 1,
@@ -115,7 +123,11 @@ export default function App() {
             <Route path="/help" element={<Help />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/login" element={<Login />} />
+            
+            {/* Rutas de autenticación */}
+            <Route path="/login" element={<Login />} /> {/* Ruta heredada - redirecciona a customerlogin */}
+            <Route path="/adminlogin" element={<AdminLogin />} />
+            <Route path="/customerlogin" element={<CustomerLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/soporte" element={<Soporte />} />
@@ -247,7 +259,11 @@ export default function App() {
         </Content>
         <Footer />
         <ChatbotButton />
+        <LoginModal />
+        <RegisterModal />
       </Layout>
+        </RegisterModalProvider>
+      </LoginModalProvider>
     </AuthProvider>
   );
 }

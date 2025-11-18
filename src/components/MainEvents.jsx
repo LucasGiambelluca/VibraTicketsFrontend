@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Card, Row, Col, Button, Tag, Spin, Empty, Typography } from 'antd';
-import { CalendarOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEventsWithShows } from '../hooks/useEventsWithShows';
 import { getEventImageUrl } from '../utils/imageUtils';
@@ -118,17 +117,27 @@ export default function MainEvents() {
             <Card
               hoverable
               style={{
-                borderRadius: '16px',
+                borderRadius: '12px',
                 overflow: 'hidden',
-                border: '1px solid #f0f0f0',
-                transition: 'all 0.3s ease',
-                height: '100%'
+                border: '1px solid #e8e8e8',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                height: '100%',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                cursor: 'pointer'
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              onClick={() => handleEventClick(event)}
               bodyStyle={{ 
-                padding: '16px',
+                padding: 0,
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
+                flexDirection: 'column'
               }}
               cover={
                 <div 
@@ -164,95 +173,93 @@ export default function MainEvents() {
                       position: 'absolute',
                       top: '12px',
                       right: '12px',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      padding: '4px 12px',
-                      fontSize: '0.75rem',
-                      background: hasShows ? primaryColor : '#E5E7EB',
-                      color: hasShows ? 'white' : '#9CA3AF',
+                      fontWeight: '500',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      background: hasShows ? 'rgba(24, 144, 255, 0.95)' : 'rgba(0, 0, 0, 0.5)',
+                      color: 'white',
                       border: 'none',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                      backdropFilter: 'blur(4px)'
                     }}
                   >
-                    {hasShows ? '✓ Disponible' : 'Próximamente'}
+                    {hasShows ? 'Disponible' : 'Próximamente'}
                   </Tag>
                 </div>
               }
             >
-              {/* Nombre del evento */}
-              <Title 
-                level={4} 
-                style={{ 
-                  margin: 0,
-                  fontSize: '1.1rem',
-                  fontFamily: fontFamily,
-                  color: textColor,
-                  fontWeight: '700',
-                  lineHeight: '1.3',
-                  minHeight: '2.6rem',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  cursor: 'pointer'
-                }}
-                onClick={() => handleEventClick(event)}
-              >
-                {event.name}
-              </Title>
-
-              {/* Venue */}
-              {(event.venue_name || event.venue_city) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <EnvironmentOutlined style={{ color: primaryColor, fontSize: '14px' }} />
-                  <Text style={{ 
-                    fontSize: '0.85rem', 
-                    color: '#6b7280',
-                    whiteSpace: 'nowrap',
+              {/* Contenido de la tarjeta */}
+              <div style={{ padding: '16px' }}>
+                {/* Nombre del evento */}
+                <Title 
+                  level={4} 
+                  style={{ 
+                    margin: '0 0 12px 0',
+                    fontSize: '16px',
+                    fontFamily: fontFamily,
+                    color: '#1a1a1a',
+                    fontWeight: '600',
+                    lineHeight: '1.4',
+                    minHeight: '44px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
-                  }}>
-                    {event.venue_name || event.venue_city || 'Venue por confirmar'}
-                  </Text>
-                </div>
-              )}
+                  }}
+                >
+                  {event.name}
+                </Title>
 
-              {/* Fecha */}
-              {lastShowDate && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CalendarOutlined style={{ color: primaryColor, fontSize: '14px' }} />
-                  <Text style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                    {lastShowDate.toLocaleDateString('es-AR', { 
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </Text>
+                {/* Venue y Fecha - Sin íconos */}
+                <div style={{ marginBottom: '12px' }}>
+                  {(event.venue_name || event.venue_city) && (
+                    <Text style={{ 
+                      display: 'block',
+                      fontSize: '13px', 
+                      color: '#666',
+                      marginBottom: '4px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {event.venue_name || event.venue_city || 'Venue por confirmar'}
+                    </Text>
+                  )}
+                  
+                  {lastShowDate && (
+                    <Text style={{ 
+                      display: 'block',
+                      fontSize: '13px', 
+                      color: '#999'
+                    }}>
+                      {lastShowDate.toLocaleDateString('es-AR', { 
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </Text>
+                  )}
                 </div>
-              )}
 
-              {/* Botón */}
-              <Button
-                type="primary"
-                block
-                size="large"
-                disabled={!hasShows}
-                onClick={() => handleEventClick(event)}
-                style={{
-                  marginTop: '8px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  height: '42px',
-                  background: hasShows 
-                    ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` 
-                    : '#E5E7EB',
-                  border: 'none',
-                  color: hasShows ? 'white' : '#9CA3AF'
-                }}
-              >
-                {hasShows ? 'Ver Entradas' : 'Próximamente'}
-              </Button>
+                {/* Botón */}
+                <Button
+                  type="primary"
+                  block
+                  disabled={!hasShows}
+                  style={{
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    height: '40px',
+                    fontSize: '14px',
+                    background: hasShows ? '#1890ff' : '#f0f0f0',
+                    border: 'none',
+                    color: hasShows ? 'white' : '#999'
+                  }}
+                >
+                  {hasShows ? 'Ver Entradas' : 'Próximamente'}
+                </Button>
+              </div>
             </Card>
           </Col>
         );

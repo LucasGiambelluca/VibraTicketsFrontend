@@ -22,6 +22,18 @@ export const authApi = {
   // Verificar si email está disponible
   checkEmail: (email) => {
     return apiClient.post(`${API_BASE}/auth/check-email`, { email });
+  },
+
+  // OAuth - Google Login
+  googleLogin: (data) => {
+    // data: { token: "google-id-token" }
+    return apiClient.post(`${API_BASE}/auth/google`, data);
+  },
+
+  // OAuth - Facebook Login
+  facebookLogin: (data) => {
+    // data: { accessToken: "facebook-access-token", userID: "facebook-user-id" }
+    return apiClient.post(`${API_BASE}/auth/facebook`, data);
   }
 };
 

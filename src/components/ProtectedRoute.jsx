@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
 import { useAuth } from '../hooks/useAuth';
+import { useLoginModal } from '../contexts/LoginModalContext';
 
 /**
  * ProtectedRoute - Componente para proteger rutas que requieren autenticación
@@ -17,6 +18,7 @@ export default function ProtectedRoute({
   redirectTo = '/login' 
 }) {
   const { user, loading, isAuthenticated } = useAuth();
+  const { openLoginModal } = useLoginModal();
   const location = useLocation();
 
   // Mostrar spinner mientras se carga la autenticación
@@ -34,9 +36,28 @@ export default function ProtectedRoute({
     );
   }
 
-  // Si no está autenticado, redirigir al login
+  // Si no está autenticado, abrir modal y mostrar contenido difuminado
+  useEffect(() => {
+    if (!isAuthenticated) {
+      openLoginModal(() => {
+        // Callback después de login exitoso
+        console.log('✅ Login exitoso, permaneciendo en:', location.pathname);
+      });
+    }
+  }, [isAuthenticated, openLoginModal, location.pathname]);
+
   if (!isAuthenticated) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+    // Mostrar el contenido con un overlay difuminado
+    return (
+      <div style={{ 
+        position: 'relative',
+        filter: 'blur(4px)',
+        pointerEvents: 'none',
+        userSelect: 'none'
+      }}>
+        {children}
+      </div>
+    );
   }
 
   // Si hay roles permitidos, verificar que el usuario tenga uno de ellos

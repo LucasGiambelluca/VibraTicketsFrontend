@@ -10,8 +10,10 @@ const CreateEvent = ({ onEventCreated }) => {
     description: '',
     category: 'MUSIC',
     location: '',
-    startsAt: '',
-    endsAt: '',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
     venue: '',
     venue_id: '',
     status: 'PUBLISHED'
@@ -68,13 +70,13 @@ const CreateEvent = ({ onEventCreated }) => {
       return;
     }
     
-    if (!formData.startsAt) {
-      setError('La fecha y hora de inicio es requerida');
+    if (!formData.startDate || !formData.startTime) {
+      setError('La fecha y hora de inicio son requeridas');
       return;
     }
     
-    if (!formData.endsAt) {
-      setError('La fecha y hora de fin es requerida');
+    if (!formData.endDate || !formData.endTime) {
+      setError('La fecha y hora de fin son requeridas');
       return;
     }
     
@@ -105,15 +107,36 @@ const CreateEvent = ({ onEventCreated }) => {
         submitData.append('description', formData.description.trim());
       }
       
-      // Fechas (convertir a ISO)
-      const startDate = new Date(formData.startsAt);
-      const endDate = new Date(formData.endsAt);
-      submitData.append('startsAt', startDate.toISOString());
-      submitData.append('endsAt', endDate.toISOString());
+      // Combinar fecha y hora, y convertir a ISO
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+      
+      // Validar que las fechas sean válidas
+      if (isNaN(startDateTime.getTime())) {
+        setError('La fecha y hora de inicio no es válida');
+        setLoading(false);
+        return;
+      }
+      
+      if (isNaN(endDateTime.getTime())) {
+        setError('La fecha y hora de fin no es válida');
+        setLoading(false);
+        return;
+      }
+      
+      // Validar que la fecha de fin sea posterior a la de inicio
+      if (endDateTime <= startDateTime) {
+        setError('La fecha de fin debe ser posterior a la fecha de inicio');
+        setLoading(false);
+        return;
+      }
+      
+      submitData.append('startsAt', startDateTime.toISOString());
+      submitData.append('endsAt', endDateTime.toISOString());
       
       console.log('📅 Fechas configuradas:', {
-        startsAt: startDate.toISOString(),
-        endsAt: endDate.toISOString()
+        startsAt: startDateTime.toISOString(),
+        endsAt: endDateTime.toISOString()
       });
       
       // 🚨 CRITICAL: Organizer ID (usuario que crea el evento)
@@ -221,8 +244,10 @@ const CreateEvent = ({ onEventCreated }) => {
         description: '',
         category: 'MUSIC',
         location: '',
-        startsAt: '',
-        endsAt: '',
+        startDate: '',
+        startTime: '',
+        endDate: '',
+        endTime: '',
         venue: '',
         venue_id: '',
         status: 'PUBLISHED'
@@ -465,29 +490,67 @@ Error técnico: ${errorMessage}`;
       {/* Sistema antiguo de imagen única eliminado - Usar EventImageUpload arriba */}
 
       <div style={formGroupStyle}>
-        <label htmlFor="startsAt" style={labelStyle}>Fecha y Hora de Inicio *</label>
-        <input
-          type="datetime-local"
-          id="startsAt"
-          name="startsAt"
-          value={formData.startsAt}
-          onChange={handleInputChange}
-          required
-          style={inputStyle}
-        />
+        <label style={labelStyle}>Fecha y Hora de Inicio *</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label htmlFor="startDate" style={{ ...labelStyle, fontSize: '14px', color: '#666' }}>Día</label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+              placeholder="dd/mm/aaaa"
+            />
+          </div>
+          <div>
+            <label htmlFor="startTime" style={{ ...labelStyle, fontSize: '14px', color: '#666' }}>Hora</label>
+            <input
+              type="time"
+              id="startTime"
+              name="startTime"
+              value={formData.startTime}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+              placeholder="hh:mm"
+            />
+          </div>
+        </div>
       </div>
 
       <div style={formGroupStyle}>
-        <label htmlFor="endsAt" style={labelStyle}>Fecha y Hora de Fin *</label>
-        <input
-          type="datetime-local"
-          id="endsAt"
-          name="endsAt"
-          value={formData.endsAt}
-          onChange={handleInputChange}
-          required
-          style={inputStyle}
-        />
+        <label style={labelStyle}>Fecha y Hora de Fin *</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label htmlFor="endDate" style={{ ...labelStyle, fontSize: '14px', color: '#666' }}>Día</label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+              placeholder="dd/mm/aaaa"
+            />
+          </div>
+          <div>
+            <label htmlFor="endTime" style={{ ...labelStyle, fontSize: '14px', color: '#666' }}>Hora</label>
+            <input
+              type="time"
+              id="endTime"
+              name="endTime"
+              value={formData.endTime}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+              placeholder="hh:mm"
+            />
+          </div>
+        </div>
       </div>
 
       <div style={formGroupStyle}>

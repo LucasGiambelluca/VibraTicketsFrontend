@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Typography, Breadcrumb, Row, Col, Card, Button, Tag, Space, Divider, Spin, message, Modal } from 'antd';
 import { useParams, Link } from 'react-router-dom';
 import { CalendarOutlined, EnvironmentOutlined, UserOutlined, ClockCircleOutlined, EditOutlined, BgColorsOutlined } from '@ant-design/icons';
@@ -29,6 +29,28 @@ export default function EventDetail() {
   
   // Verificar si el usuario puede editar
   const canEdit = user && (user.role === 'ADMIN' || user.role === 'ORGANIZER');
+  
+  // Calcular el próximo show (función más cercana a hoy)
+  const nextShow = useMemo(() => {
+    if (!shows || shows.length === 0) return null;
+    
+    const now = new Date();
+    
+    // Filtrar shows futuros y ordenar por fecha
+    const futureShows = shows
+      .filter(show => {
+        const showDate = new Date(show.startsAt || show.starts_at);
+        return showDate >= now;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.startsAt || a.starts_at);
+        const dateB = new Date(b.startsAt || b.starts_at);
+        return dateA - dateB;
+      });
+    
+    // Retornar el show más cercano
+    return futureShows.length > 0 ? futureShows[0] : shows[shows.length - 1];
+  }, [shows]);
 
   // Cargar Google Fonts dinámicamente si el evento tiene fuente personalizada
   useEffect(() => {
@@ -328,9 +350,13 @@ export default function EventDetail() {
                         <Text strong>Próxima Función</Text>
                         <br />
                         <Text>
-                          {event.next_show_date 
-                            ? formatEventDate(event.next_show_date)
+                          {nextShow
+                            ? formatEventDate(nextShow.startsAt || nextShow.starts_at)
                             : 'Por definir'}
+                        </Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: '0.85rem' }}>
+                          {nextShow && formatEventTime(nextShow.startsAt || nextShow.starts_at)}
                         </Text>
                         <br />
                         <Text type="secondary" style={{ fontSize: '0.85rem' }}>

@@ -1454,18 +1454,40 @@ function ShowsAdmin() {
         ? eventsResponse
         : (eventsResponse?.events || eventsResponse?.data || []);
       
-      // Enriquecer shows con información del evento
-      const enrichedShows = showsList.map(show => {
+      // Enriquecer shows con información del evento y calcular asientos disponibles
+      const enrichedShowsPromises = showsList.map(async (show) => {
         const event = eventsList.find(e => e.id === (show.eventId || show.event_id));
+        
+        // Cargar secciones del show para calcular asientos disponibles
+        let availableSeats = 0;
+        try {
+          const sectionsResponse = await showsApi.getShowSections(show.id);
+          const sections = Array.isArray(sectionsResponse) 
+            ? sectionsResponse 
+            : (sectionsResponse?.sections || []);
+          
+          // Sumar los asientos disponibles de todas las secciones
+          availableSeats = sections.reduce((sum, section) => {
+            return sum + (section.available_seats || 0);
+          }, 0);
+        } catch (err) {
+          console.error(`⚠️ Error cargando secciones del show ${show.id}:`, err);
+          // Si falla, dejar en 0
+          availableSeats = 0;
+        }
         
         return {
           ...show,
           event_name: event?.name || `Evento #${show.eventId || show.event_id}`,
           venue_name: event?.venue_name || show.venue_name || 'Sin venue',
           venue_city: event?.venue_city || show.venue_city,
-          venue_id: event?.venue_id || event?.venueId || show.venue_id || show.venueId
+          venue_id: event?.venue_id || event?.venueId || show.venue_id || show.venueId,
+          available_seats: availableSeats
         };
       });
+      
+      // Esperar a que todos los shows se enriquezcan con sus secciones
+      const enrichedShows = await Promise.all(enrichedShowsPromises);
       
       setShows(enrichedShows);
       setEvents(eventsList);

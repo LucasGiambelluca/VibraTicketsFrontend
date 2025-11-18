@@ -6,7 +6,6 @@ export const useVenues = (filters = {}) => {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [initialized, setInitialized] = useState(false);
 
   const loadVenues = async (newFilters = {}) => {
     try {
@@ -123,17 +122,11 @@ export const useVenues = (filters = {}) => {
   };
 
   useEffect(() => {
-    // Solo cargar una vez, evitar múltiples llamadas en StrictMode
-    if (!initialized) {
-      setInitialized(true);
-      // Usar requestAnimationFrame para evitar problemas de timing
-      const rafId = requestAnimationFrame(() => {
-        loadVenues();
-      });
-
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [initialized]);
+    // Cargar venues automáticamente al montar el componente
+    // y recargar cuando cambien los filters
+    loadVenues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters)]); // Recargar cuando cambien los filters
 
   const refetch = async () => {
     setVenues([]); // Limpiar venues actuales

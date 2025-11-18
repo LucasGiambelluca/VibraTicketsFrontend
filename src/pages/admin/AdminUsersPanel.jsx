@@ -144,39 +144,59 @@ const AdminUsersPanel = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Cargando usuarios con filtros:', {
+        filters,
+        page: pagination.page,
+        limit: pagination.limit
+      });
+      
       const response = await adminUsersApi.listUsers({
         ...filters,
         page: pagination.page,
         limit: pagination.limit
       });
+      
+      console.log('📦 Respuesta del backend:', response);
+      console.log('🔑 Claves de la respuesta:', Object.keys(response || {}));
+      
       // Manejo flexible del shape de respuesta
       let usersList = [];
       let total = 0;
       let totalPages = undefined;
 
       if (response?.success && response?.data?.users) {
+        console.log('✅ Usando response.data.users');
         usersList = response.data.users;
         total = response.data?.pagination?.total ?? usersList.length;
         totalPages = response.data?.pagination?.totalPages;
       } else if (Array.isArray(response)) {
+        console.log('✅ Response es array directo');
         usersList = response;
         total = usersList.length;
       } else if (response?.users) {
+        console.log('✅ Usando response.users');
         usersList = response.users;
         total = response?.pagination?.total ?? usersList.length;
         totalPages = response?.pagination?.totalPages;
       } else if (response?.data) {
+        console.log('✅ Explorando response.data');
         const data = response.data;
         if (Array.isArray(data)) {
+          console.log('✅ response.data es array');
           usersList = data;
           total = usersList.length;
         } else if (Array.isArray(data?.users)) {
+          console.log('✅ Usando response.data.users');
           usersList = data.users;
           total = data?.pagination?.total ?? usersList.length;
           totalPages = data?.pagination?.totalPages;
         }
+      } else {
+        console.log('⚠️ No se pudo parsear la respuesta. Estructura desconocida.');
       }
 
+      console.log(`✅ Usuarios cargados: ${usersList.length}`, usersList);
+      
       setUsers(usersList);
       setPagination(prev => ({
         ...prev,
@@ -184,8 +204,14 @@ const AdminUsersPanel = () => {
         totalPages
       }));
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
-      message.error('Error al cargar usuarios');
+      console.error('❌ Error cargando usuarios:', error);
+      console.error('❌ Error completo:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      message.error(`Error al cargar usuarios: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -346,18 +372,61 @@ const AdminUsersPanel = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId, userName) => {
     try {
       if (!isAdmin) {
         message.error('Solo ADMIN puede eliminar usuarios');
         return;
       }
-      await adminUsersApi.deleteUser(userId);
-      message.success('Usuario eliminado');
+      
+      const response = await adminUsersApi.deleteUser(userId);
+      
+      // Mostrar mensaje de éxito
+      if (response?.success || response?.message) {
+        message.success(response?.message || `Usuario "${userName}" eliminado exitosamente`);
+      } else {
+        message.success('Usuario eliminado exitosamente');
+      }
+      
+      // Recargar lista de usuarios
       loadUsers();
     } catch (error) {
-      const msg = error?.response?.message || error?.message || 'Error al eliminar usuario';
-      message.error(msg);
+      console.error('❌ Error al eliminar usuario:', error);
+      
+      // Extraer mensaje de error del backend
+      let errorMessage = 'Error al eliminar usuario';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Manejar casos específicos de error
+      const status = error.response?.status;
+      
+      if (status === 400) {
+        // Errores de validación (tiene órdenes pagadas, tickets activos, etc.)
+        const data = error.response?.data?.data;
+        
+        if (data?.paidOrdersCount) {
+          const msg = `${errorMessage}\n\nTiene ${data.paidOrdersCount} orden(es) pagada(s). Por seguridad, no se puede eliminar. Puedes desactivarlo en su lugar.`;
+          message.error(msg, 8);
+        } else if (data?.activeTicketsCount) {
+          const msg = `${errorMessage}\n\nTiene ${data.activeTicketsCount} ticket(s) activo(s).`;
+          message.error(msg, 8);
+        } else {
+          message.error(errorMessage, 6);
+        }
+      } else if (status === 403) {
+        message.error('No tienes permisos para eliminar usuarios. Solo ADMIN puede eliminar.');
+      } else if (status === 404) {
+        message.error('Usuario no encontrado');
+      } else {
+        message.error(errorMessage, 5);
+      }
     }
   };
 
@@ -454,14 +523,17 @@ const AdminUsersPanel = () => {
             />
           </Tooltip>
           <Popconfirm
-            title="Eliminar usuario"
-            description="Esta acción no se puede deshacer. ¿Eliminar?"
+            title={`¿Eliminar a ${record.name}?`}
+            description="Esta acción no se puede deshacer. El usuario será marcado como eliminado."
             okText="Sí, eliminar"
+            okType="danger"
             cancelText="Cancelar"
-            onConfirm={() => handleDeleteUser(record.id)}
+            onConfirm={() => handleDeleteUser(record.id, record.name)}
             disabled={!isAdmin}
           >
-            <Button danger icon={<DeleteOutlined />} size="small" disabled={!isAdmin} />
+            <Tooltip title="Eliminar usuario">
+              <Button danger icon={<DeleteOutlined />} size="small" disabled={!isAdmin} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       )

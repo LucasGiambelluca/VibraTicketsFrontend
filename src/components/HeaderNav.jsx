@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, message } from 'antd';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -12,6 +12,8 @@ import {
   UserAddOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
+import { useLoginModal } from '../contexts/LoginModalContext';
+import { useRegisterModal } from '../contexts/RegisterModalContext';
 import logo from '../assets/VibraTicketLogo2.png';
 
 const { Header } = Layout;
@@ -20,10 +22,13 @@ export default function HeaderNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout, isAdmin, isOrganizer } = useAuth();
+  const { openLoginModal } = useLoginModal();
+  const { openRegisterModal } = useRegisterModal();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    message.success('¡Hasta pronto!');
+    navigate('/');
   };
 
   // Menú del usuario autenticado
@@ -180,7 +185,7 @@ export default function HeaderNav() {
             <Button
               type="default"
               icon={<LoginOutlined />}
-              onClick={() => navigate('/login')}
+              onClick={() => openLoginModal()}
               style={{
                 borderColor: 'white',
                 color: 'white',
@@ -192,7 +197,7 @@ export default function HeaderNav() {
             <Button
               type="primary"
               icon={<UserAddOutlined />}
-              onClick={() => navigate('/register')}
+              onClick={() => openRegisterModal()}
               style={{
                 background: 'white',
                 color: '#764ba2',

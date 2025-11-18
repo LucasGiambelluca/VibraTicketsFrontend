@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventBannerUrl } from '../utils/imageUtils';
+import VenueSeatingChart from '../components/VenueSeatingChart';
 
 const { Title, Text } = Typography;
 
@@ -531,6 +532,34 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
           
           {sections.length > 0 ? (
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              {/* Mapa Visual del Venue */}
+              <VenueSeatingChart
+                sections={sections.map(section => ({
+                  ...section,
+                  available_seats: seats.filter(seat => 
+                    seat.sector === section.name && 
+                    seat.status === 'AVAILABLE'
+                  ).length
+                }))}
+                selectedQuantities={sectionQuantities}
+                onSectionClick={(section) => {
+                  const availableCount = seats.filter(seat => 
+                    seat.sector === section.name && 
+                    seat.status === 'AVAILABLE'
+                  ).length;
+                  
+                  if (availableCount === 0) {
+                    message.warning(`La sección "${section.name}" está agotada`);
+                    return;
+                  }
+                  
+                  const currentQty = sectionQuantities[String(section.id)] || 0;
+                  const newQty = currentQty === 0 ? 1 : 0; // Toggle entre 0 y 1
+                  handleQuantityChange(section.id, newQty);
+                }}
+              />
+              
+              <Divider>Detalle por Sección</Divider>
               {sections.map(section => (
                 <React.Fragment key={section.id}>
                   <Row align="middle" justify="space-between">
