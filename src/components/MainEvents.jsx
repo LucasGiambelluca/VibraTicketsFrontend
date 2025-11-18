@@ -115,82 +115,156 @@ export default function MainEvents() {
 
         return (
           <Col xs={24} sm={12} md={8} lg={6} key={event.id}>
-            <div
+            <Card
+              hoverable
               style={{
-                borderRadius: '12px',
+                borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                cursor: 'pointer',
-                background: 'white',
+                border: '1px solid #f0f0f0',
+                transition: 'all 0.3s ease',
                 height: '100%',
-                position: 'relative'
+                display: 'flex',
+                flexDirection: 'column'
               }}
-              onClick={() => handleEventClick(event)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-              }}
+              bodyStyle={{ padding: '16px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}
+              cover={
+                <div style={{ 
+                  position: 'relative', 
+                  width: '100%',
+                  paddingBottom: '100%', // Aspect ratio 1:1 (cuadrado perfecto)
+                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                  overflow: 'hidden'
+                }}>
+                  <img
+                    alt={event.name}
+                    src={imageUrl}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.4s ease'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                  {/* Tag de disponibilidad */}
+                  <Tag
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      fontWeight: '600',
+                      borderRadius: '8px',
+                      padding: '4px 12px',
+                      fontSize: '0.75rem',
+                      background: hasShows ? primaryColor : '#E5E7EB',
+                      color: hasShows ? 'white' : '#9CA3AF',
+                      border: 'none',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                    }}
+                  >
+                    {hasShows ? '✓ Disponible' : 'Próximamente'}
+                  </Tag>
+                </div>
+              }
             >
-              {/* Imagen que ocupa toda la card */}
-              <div style={{ 
-                position: 'relative', 
-                width: '100%',
-                paddingBottom: '140%', // Aspect ratio más alto (similar a AllAccess)
-                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                overflow: 'hidden'
-              }}>
-                <img
-                  alt={event.name}
-                  src={imageUrl}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.4s ease'
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                  onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
-                  onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                />
-                {/* Overlay oscuro sutil */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%)',
-                  pointerEvents: 'none'
-                }} />
-                {/* Tag de disponibilidad */}
-                <Tag
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    fontWeight: '600',
-                    borderRadius: '6px',
-                    padding: '2px 8px',
-                    fontSize: '0.75rem',
-                    background: hasShows ? primaryColor : '#E5E7EB',
-                    color: hasShows ? 'white' : '#9CA3AF',
-                    border: 'none'
+              {/* Información del evento */}
+              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Nombre del evento */}
+                <Title 
+                  level={4} 
+                  style={{ 
+                    margin: 0,
+                    fontSize: '1.1rem',
+                    fontFamily: fontFamily,
+                    color: textColor,
+                    fontWeight: '700',
+                    lineHeight: '1.3',
+                    minHeight: '2.6rem',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                 >
-                  {hasShows ? 'Disponible' : 'Próximamente'}
-                </Tag>
+                  {event.name}
+                </Title>
+
+                {/* Venue y ciudad */}
+                {(event.venue_name || event.venue_city) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <EnvironmentOutlined style={{ color: primaryColor, fontSize: '14px' }} />
+                    <Text style={{ 
+                      fontSize: '0.85rem', 
+                      color: '#6b7280',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {event.venue_name || event.venue_city || 'Venue por confirmar'}
+                    </Text>
+                  </div>
+                )}
+
+                {/* Fecha del último show */}
+                {lastShowDate && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CalendarOutlined style={{ color: primaryColor, fontSize: '14px' }} />
+                    <Text style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                      {lastShowDate.toLocaleDateString('es-AR', { 
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </Text>
+                  </div>
+                )}
+
+                {/* Descripción truncada */}
+                {truncatedDesc && (
+                  <Text 
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#9ca3af',
+                      lineHeight: '1.4',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      minHeight: '2.2rem'
+                    }}
+                  >
+                    {truncatedDesc}
+                  </Text>
+                )}
               </div>
-            </div>
+
+              {/* Botón de acción */}
+              <Button
+                type="primary"
+                block
+                size="large"
+                disabled={!hasShows}
+                onClick={() => handleEventClick(event)}
+                style={{
+                  marginTop: '12px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  height: '42px',
+                  background: hasShows ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` : '#E5E7EB',
+                  border: 'none',
+                  color: hasShows ? 'white' : '#9CA3AF'
+                }}
+              >
+                {hasShows ? 'Ver Entradas' : 'Próximamente'}
+              </Button>
+            </Card>
           </Col>
         );
       })}
