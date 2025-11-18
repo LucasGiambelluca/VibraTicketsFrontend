@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Card, Row, Col, message, Button, Typography, Alert, Tag, Space, Image } from 'antd';
-import { PlusOutlined, DeleteOutlined, EyeOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { Upload, Card, Row, Col, message, Button, Typography, Alert, Tag, Space, Image, Tooltip } from 'antd';
+import { PlusOutlined, DeleteOutlined, EyeOutlined, CloudUploadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { eventImagesApi } from '../services/apiService';
 import { getImageUrl } from '../utils/imageUtils';
 
