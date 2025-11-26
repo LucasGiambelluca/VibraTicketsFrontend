@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 import { showsApi, eventsApi, holdsApi, queueApi } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
+import { useLoginModal } from '../contexts/LoginModalContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventBannerUrl } from '../utils/imageUtils';
@@ -36,6 +37,7 @@ export default function ShowDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { openLoginModal } = useLoginModal();
   const [show, setShow] = useState(null);
   const [event, setEvent] = useState(null);
   const [sections, setSections] = useState([]); // Secciones del show
@@ -45,7 +47,7 @@ export default function ShowDetail() {
   const [error, setError] = useState(null);
   const [sectionQuantities, setSectionQuantities] = useState({}); // Cantidades por sección
   const [queueEnabled, setQueueEnabled] = useState(false); // Si la cola está habilitada
-  const [hasQueueAccess, setHasQueueAccess] = useState(false); // Si tiene acceso a la cola
+  const [hasQueueAccess, setHasQueueAccess] = useState(true); // Si tiene acceso a la cola (default: true para fail-open)
 
   // Función para recargar asientos (reutilizable)
   // IMPORTANTE: Retorna los asientos para uso inmediato (no esperar state update)
@@ -143,7 +145,8 @@ export default function ShowDetail() {
         }
       } catch (error) {
         console.error('Error verificando estado de cola:', error);
-        // En caso de error, permitir acceso (fail-open)
+        // Si el endpoint no existe (404) o hay cualquier error, 
+        // asumir que la cola NO está habilitada y permitir acceso directo (fail-open)
         setQueueEnabled(false);
         setHasQueueAccess(true);
       }
@@ -235,8 +238,8 @@ export default function ShowDetail() {
         setLoading(false);
       }
     };
-    if (showId && hasValidAccess) loadShowData();
-  }, [showId, hasValidAccess]);
+    if (showId && hasQueueAccess) loadShowData();
+  }, [showId, hasQueueAccess]);
 
   const handleQuantityChange = (sectionId, newQuantity) => {
     // Normalizar sectionId a string para consistencia
@@ -264,6 +267,12 @@ export default function ShowDetail() {
   const { totalTickets, totalPrice } = useMemo(() => {
     let totalTickets = 0;
     let totalPrice = 0;
+    
+    // Validar que sections esté disponible
+    if (!sections || sections.length === 0) {
+      return { totalTickets: 0, totalPrice: 0 };
+    }
+    
     for (const sectionId in sectionQuantities) {
       const quantity = sectionQuantities[sectionId];
       if (quantity > 0) {
@@ -292,8 +301,25 @@ export default function ShowDetail() {
 
     // Validar que el usuario esté autenticado
     if (!user || !user.email) {
-      message.error('Debes iniciar sesión para continuar con la compra.');
-      navigate('/login', { state: { from: `/shows/${showId}` } });
+      message.warning('Debes iniciar sesión para continuar con la compra.');
+      // Abrir modal de login con callback para continuar después del login
+      openLoginModal(() => {
+        // Después del login exitoso, intentar continuar automáticamente
+        setTimeout(() => {
+          try {
+            handleContinue();
+          } catch (error) {
+            console.error('❌ Error al continuar después del login:', error);
+            message.error('Hubo un error al procesar tu solicitud. Por favor, intentá nuevamente.');
+          }
+        }, 500);
+      });
+      return;
+    }
+    
+    // Validar que se hayan cargado las secciones
+    if (!sections || sections.length === 0) {
+      message.error('No se pudieron cargar las secciones del show. Por favor, recargá la página.');
       return;
     }
     
@@ -310,10 +336,11 @@ export default function ShowDetail() {
           if (!section) {
             console.error(`❌ No se encontró la sección con ID: ${sectionId}`);
             console.error(`❌ IDs disponibles:`, sections.map(s => s.id));
+            throw new Error(`No se encontró la sección con ID: ${sectionId}`);
           }
           
           // Usar el campo correcto para el nombre
-          const sectionName = section?.name || section?.sector || `Sección ${sectionId}`;
+          const sectionName = section.name || section.sector || `Sección ${sectionId}`;
           
           return {
             sectionId: parseInt(sectionId),
@@ -410,9 +437,9 @@ export default function ShowDetail() {
       }
 
       // Log con token ofuscado (opcional para debug)
-      console.log('🧾 Creando HOLD con tokens ocultos', {
+      console.log('🧾 Creando HOLD', {
         ...holdData,
-        accessToken: '***' + accessToken.slice(-8)
+        accessToken: accessToken ? '***' + accessToken.slice(-8) : 'N/A (cola no habilitada)'
       });
       const holdResponse = await holdsApi.createHold(holdData);
       message.success(`¡Asientos reservados! Tenés ${holdResponse.ttlMinutes || 15} minutos para completar la compra.`, 5);

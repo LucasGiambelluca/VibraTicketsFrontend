@@ -16,8 +16,11 @@ export function LoginModalProvider({ children }) {
    */
   const openLoginModal = useCallback((onSuccess) => {
     setIsLoginModalVisible(true);
-    if (onSuccess) {
+    if (onSuccess && typeof onSuccess === 'function') {
+      // Guardar la función directamente, no como callback de setState
       setOnSuccessCallback(() => onSuccess);
+    } else {
+      setOnSuccessCallback(null);
     }
   }, []);
 
@@ -33,8 +36,13 @@ export function LoginModalProvider({ children }) {
    * Manejar el éxito del login
    */
   const handleLoginSuccess = useCallback((user) => {
-    if (onSuccessCallback) {
-      onSuccessCallback(user);
+    // Ejecutar callback solo si existe y es una función
+    if (onSuccessCallback && typeof onSuccessCallback === 'function') {
+      try {
+        onSuccessCallback(user);
+      } catch (error) {
+        console.error('❌ Error ejecutando callback de login:', error);
+      }
     }
     closeLoginModal();
   }, [onSuccessCallback, closeLoginModal]);

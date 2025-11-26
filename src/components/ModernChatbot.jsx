@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input, Button, Avatar, Spin, message } from 'antd';
 import { SendOutlined, RobotOutlined, UserOutlined, CloseOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const ModernChatbot = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
@@ -28,9 +28,21 @@ const ModernChatbot = ({ isOpen, onClose }) => {
     { text: 'Cuéntame un chiste' }
   ];
 
-  // Groq API configuration
-  const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || 'gsk_your_api_key_here';
-  const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+  // Google Gemini API configuration
+  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  // Debug: Verificar si la API key está cargada
+  useEffect(() => {
+    if (GEMINI_API_KEY) {
+      console.log('✅ Gemini API Key cargada correctamente');
+      console.log('🔑 API Key (primeros 10 caracteres):', GEMINI_API_KEY.substring(0, 10) + '...');
+    } else {
+      console.error('❌ VITE_GEMINI_API_KEY no está definida en .env');
+      console.error('📝 Asegúrate de tener VITE_GEMINI_API_KEY=tu_api_key en el archivo .env');
+    }
+  }, []);
+  
+  const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,8 +52,16 @@ const ModernChatbot = ({ isOpen, onClose }) => {
     scrollToBottom();
   }, [messages]);
 
-  const getGroqResponse = async (userMessage) => {
+  const getGeminiResponse = async (userMessage) => {
     try {
+      // Verificar que la API key esté configurada
+      if (!GEMINI_API_KEY || !genAI) {
+        console.error('❌ GEMINI_API_KEY no está configurada en .env');
+        throw new Error('API Key no configurada');
+      }
+
+      console.log('🤖 Enviando mensaje a Gemini:', userMessage);
+
       const systemPrompt = `Eres Vibra BOT, un asistente virtual inteligente y versátil. Tu función principal es ayudar a los usuarios de VibraTicket (plataforma de venta de tickets), pero también puedes responder preguntas generales sobre cualquier tema.
 
 📋 CONTEXTO DE VIBRATICKET (tu especialidad):
@@ -121,39 +141,56 @@ Tú: [Cuenta un chiste apropiado y divertido]
 
 Recuerda: Eres un asistente completo. Ayuda con VibraTicket cuando sea necesario, pero también sé útil en cualquier otro tema. 🎉`;
 
+      // Inicializar el modelo Gemini
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        systemInstruction: systemPrompt
+      });
+
       // Construir historial de conversación (últimos 6 mensajes para contexto)
       const conversationHistory = messages
         .slice(-6)
+        .filter(msg => msg.sender !== 'bot' || msg.id !== 1) // Excluir mensaje inicial
         .map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.text
+          role: msg.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
         }));
 
-      const response = await axios.post(
-        GROQ_API_URL,
-        {
-          model: 'mixtral-8x7b-32768',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...conversationHistory,
-            { role: 'user', content: userMessage }
-          ],
+      // Crear chat con historial
+      const chat = model.startChat({
+        history: conversationHistory,
+        generationConfig: {
           temperature: 0.7,
-          max_tokens: 600
+          maxOutputTokens: 600,
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      });
 
-      return response.data.choices[0].message.content;
+      // Enviar mensaje y obtener respuesta
+      console.log('📤 Enviando mensaje al chat de Gemini...');
+      const result = await chat.sendMessage(userMessage);
+      const response = await result.response;
+      const responseText = response.text();
+      console.log('✅ Respuesta recibida de Gemini:', responseText.substring(0, 100) + '...');
+      return responseText;
+
     } catch (error) {
-      console.error('Error calling Groq API:', error);
+      console.error('❌ Error calling Gemini API:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       
-      // Fallback responses si Groq no está disponible
+      // Mostrar mensaje de error más específico
+      if (error.message?.includes('API_KEY_INVALID')) {
+        console.error('🔑 La API Key de Gemini es inválida');
+      } else if (error.message?.includes('QUOTA_EXCEEDED')) {
+        console.error('📊 Se excedió la cuota de Gemini API');
+      } else if (!GEMINI_API_KEY) {
+        console.error('⚠️ No se encontró VITE_GEMINI_API_KEY en las variables de entorno');
+      }
+      
+      // Fallback responses si Gemini no está disponible
       const fallbackResponses = {
         'ticket': 'Para problemas con tickets:\n\n1. Ve a "Mis Entradas" en el menú\n2. Busca tu ticket\n3. Descárgalo en PDF\n4. Si no aparece, verifica tu email\n\n¿Necesitas más ayuda?',
         'pago': 'Problemas con el pago:\n\n1. Verifica fondos en tu tarjeta\n2. Intenta con otro método de pago\n3. Revisa que los datos sean correctos\n4. Contacta a MercadoPago si persiste\n\n¿Algo más?',
@@ -197,7 +234,7 @@ Recuerda: Eres un asistente completo. Ayuda con VibraTicket cuando sea necesario
     setIsLoading(true);
 
     try {
-      const botResponse = await getGroqResponse(textToSend);
+      const botResponse = await getGeminiResponse(textToSend);
       
       const botMessage = {
         id: Date.now() + 1,
@@ -462,7 +499,7 @@ Recuerda: Eres un asistente completo. Ayuda con VibraTicket cuando sea necesario
           fontSize: 11,
           color: '#999'
         }}>
-          powered by Groq
+          powered by Google Gemini
         </div>
       </div>
     </div>

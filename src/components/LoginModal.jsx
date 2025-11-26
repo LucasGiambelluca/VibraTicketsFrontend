@@ -30,6 +30,11 @@ export default function LoginModal() {
         password: values.password
       });
       
+      // Verificar que el usuario se haya logueado correctamente
+      if (!user || !user.email) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
+      
       message.success(`¡Bienvenido ${user.name || user.email}!`);
       
       // Limpiar formulario
@@ -41,12 +46,24 @@ export default function LoginModal() {
     } catch (error) {
       console.error('❌ Error en login:', error);
       
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Error al iniciar sesión. Verifica tus credenciales.';
+      // Extraer mensaje de error de forma segura
+      let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
+      
+      try {
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } catch (e) {
+        console.error('❌ Error al procesar mensaje de error:', e);
+      }
       
       setError(errorMessage);
       message.error(errorMessage);
+      
+      // NO cerrar el modal en caso de error
+      // El usuario puede intentar nuevamente
     } finally {
       setLoading(false);
     }

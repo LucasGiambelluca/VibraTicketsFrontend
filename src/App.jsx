@@ -5,6 +5,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { LoginModalProvider } from "./contexts/LoginModalContext";
 import { RegisterModalProvider } from "./contexts/RegisterModalContext";
 import { useQueueCleanup } from "./hooks/useQueueCleanup";
+import ErrorBoundary from "./components/ErrorBoundary";
 import LoginModal from "./components/LoginModal";
 import RegisterModal from "./components/RegisterModal";
 import ProtectedRoute, { OrganizerRoute, AdminRoute } from "./components/ProtectedRoute";
@@ -103,16 +104,17 @@ export default function App() {
 
   // 3. Mostrar la app completa
   return (
-    <AuthProvider>
-      <LoginModalProvider>
-        <RegisterModalProvider>
-          <Layout style={{ 
-          minHeight: "100vh", 
-          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-          display: "flex",
-          flexDirection: "column"
-        }}>
-          <HeaderNav />
+    <ErrorBoundary>
+      <AuthProvider>
+        <LoginModalProvider>
+          <RegisterModalProvider>
+            <Layout style={{ 
+            minHeight: "100vh", 
+            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+            display: "flex",
+            flexDirection: "column"
+          }}>
+            <HeaderNav />
         <Content style={{ 
           padding: '0', 
           flex: 1,
@@ -269,5 +271,6 @@ export default function App() {
         </RegisterModalProvider>
       </LoginModalProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

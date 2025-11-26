@@ -85,10 +85,15 @@ export default function MercadoPagoButton({
         })
       };
 
+      // 🔍 LOG para debug: Ver estructura del payer antes de enviar
+      console.log('📦 Payer payload a enviar:', JSON.stringify(payerPayload, null, 2));
+
       // 2) Crear preferencia de pago con orderId (nuevo requisito backend)
       const response = await paymentsApi.createPaymentPreference({
         orderId: parseInt(orderId),
         payer: payerPayload,
+        customerEmail: payer.email, // 🔧 Workaround: backend espera customerEmail como campo separado
+        customerName: `${payer.name || 'Usuario'} ${payer.surname || 'VibraTicket'}`,
         backUrls
       }, true);
       

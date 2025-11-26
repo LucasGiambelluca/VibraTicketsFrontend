@@ -11,8 +11,10 @@ export function RegisterModalProvider({ children }) {
 
   const openRegisterModal = useCallback((onSuccess) => {
     setIsRegisterModalVisible(true);
-    if (onSuccess) {
+    if (onSuccess && typeof onSuccess === 'function') {
       setOnSuccessCallback(() => onSuccess);
+    } else {
+      setOnSuccessCallback(null);
     }
   }, []);
 
@@ -22,8 +24,13 @@ export function RegisterModalProvider({ children }) {
   }, []);
 
   const handleRegisterSuccess = useCallback((user) => {
-    if (onSuccessCallback) {
-      onSuccessCallback(user);
+    // Ejecutar callback solo si existe y es una función
+    if (onSuccessCallback && typeof onSuccessCallback === 'function') {
+      try {
+        onSuccessCallback(user);
+      } catch (error) {
+        console.error('❌ Error ejecutando callback de registro:', error);
+      }
     }
     closeRegisterModal();
   }, [onSuccessCallback, closeRegisterModal]);
