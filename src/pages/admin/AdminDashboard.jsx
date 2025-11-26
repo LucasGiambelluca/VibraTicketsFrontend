@@ -15,7 +15,8 @@ import {
   HeartOutlined,
   EnvironmentOutlined,
   PictureOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  ShoppingCartOutlined
 } from '@ant-design/icons';
 import CreateEvent from '../../components/CreateEvent';
 import CreateVenue from '../../components/CreateVenue';
@@ -26,6 +27,7 @@ import EventStyleEditor from '../../components/EventStyleEditor';
 import AdminBanners from './AdminBanners';
 import ReportsPanel from './ReportsPanel';
 import AdminUsersPanel from './AdminUsersPanel';
+import ManageOrders from './ManageOrders';
 import { getImageUrl } from '../../utils/imageUtils';
 import { useEvents } from '../../hooks/useEvents';
 import { showsApi, eventsApi, eventStylesApi } from '../../services/apiService';
@@ -98,6 +100,11 @@ export default function AdminDashboard() {
       label: 'Usuarios',
     },
     {
+      key: 'orders',
+      icon: <ShoppingCartOutlined />,
+      label: 'Órdenes',
+    },
+    {
       key: 'health',
       icon: <HeartOutlined />,
       label: 'Estado del Sistema',
@@ -130,6 +137,8 @@ export default function AdminDashboard() {
         return <ReportsPanel />;
       case 'users':
         return <AdminUsersPanel />;
+      case 'orders':
+        return <ManageOrders />;
       case 'health':
         return <HealthContent />;
       case 'settings':

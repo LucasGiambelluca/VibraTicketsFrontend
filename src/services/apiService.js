@@ -448,6 +448,32 @@ export const ordersApi = {
   }
 };
 
+// ============================================
+// MANAGE ORDERS API - Gestión de Órdenes (ADMIN)
+// ============================================
+export const manageOrdersApi = {
+  // Obtener todas las órdenes pendientes
+  // RUTA: GET /api/manage/orders/pending
+  // Requiere: ADMIN role
+  getPendingOrders: () => {
+    return apiClient.get(`${API_BASE}/manage/orders/pending`);
+  },
+
+  // Obtener estado de una orden específica
+  // RUTA: GET /api/manage/orders/:orderId/status
+  // Requiere: ADMIN role
+  getOrderStatus: (orderId) => {
+    return apiClient.get(`${API_BASE}/manage/orders/${orderId}/status`);
+  },
+
+  // Cancelar una orden pendiente
+  // RUTA: POST /api/manage/orders/:orderId/cancel
+  // Requiere: ADMIN role
+  cancelOrder: (orderId) => {
+    return apiClient.post(`${API_BASE}/manage/orders/${orderId}/cancel`);
+  }
+};
+
 // Tickets API - Sistema de reservas de tickets (Backend V2 - OFICIAL)
 // ✅ Endpoints implementados y funcionales según TESTING_GUIDE_STEP_BY_STEP.md
 export const ticketsApi = {
@@ -959,6 +985,7 @@ export default {
   queue: queueApi,
   holds: holdsApi,
   orders: ordersApi,
+  manageOrders: manageOrdersApi,
   reservations: reservationsApi,
   tickets: ticketsApi,
   payments: paymentsApi,

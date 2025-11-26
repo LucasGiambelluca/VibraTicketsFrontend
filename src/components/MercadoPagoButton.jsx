@@ -9,13 +9,15 @@ import { paymentsApi, ordersApi } from '../services/apiService';
  * @param {Object} props
  * @param {number|string} props.holdId - ID del hold/reserva
  * @param {Object} props.payer - Información del pagador (name, surname, email, phone, etc.)
+ * @param {number} props.totalAmount - Monto total a pagar (incluyendo service charge)
  * @param {Function} props.onError - Callback opcional para manejar errores
  * @param {string} props.size - Tamaño del botón ('small', 'middle', 'large')
  * @param {boolean} props.block - Si el botón ocupa todo el ancho
  */
 export default function MercadoPagoButton({ 
   holdId, 
-  payer, 
+  payer,
+  totalAmount,
   onError,
   size = 'large',
   block = true 
@@ -87,15 +89,31 @@ export default function MercadoPagoButton({
 
       // 🔍 LOG para debug: Ver estructura del payer antes de enviar
       console.log('📦 Payer payload a enviar:', JSON.stringify(payerPayload, null, 2));
+      console.log('💰 Monto total a pagar:', totalAmount);
 
       // 2) Crear preferencia de pago con orderId (nuevo requisito backend)
-      const response = await paymentsApi.createPaymentPreference({
+      const preferencePayload = {
         orderId: parseInt(orderId),
         payer: payerPayload,
         customerEmail: payer.email, // 🔧 Workaround: backend espera customerEmail como campo separado
         customerName: `${payer.name || 'Usuario'} ${payer.surname || 'VibraTicket'}`,
         backUrls
-      }, true);
+      };
+
+      // Si se proporciona totalAmount, incluirlo en el payload en múltiples formatos
+      // para maximizar compatibilidad con el backend
+      if (totalAmount && totalAmount > 0) {
+        preferencePayload.totalAmount = totalAmount;
+        preferencePayload.totalCents = Math.round(totalAmount * 100); // En centavos
+        preferencePayload.amount = totalAmount; // Formato alternativo
+        console.log('✅ Enviando monto total al backend:', {
+          totalAmount,
+          totalCents: Math.round(totalAmount * 100),
+          amount: totalAmount
+        });
+      }
+
+      const response = await paymentsApi.createPaymentPreference(preferencePayload, true);
       
       // Obtener init_point (URL de redirección a MercadoPago)
       const initPoint = response?.initPoint || 

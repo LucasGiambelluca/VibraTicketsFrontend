@@ -440,6 +440,7 @@ export default function Checkout() {
                         <MercadoPagoButton
                           holdId={holdId}
                           payer={getPayerInfo()}
+                          totalAmount={total}
                           onError={handlePaymentError}
                         />
                       );
