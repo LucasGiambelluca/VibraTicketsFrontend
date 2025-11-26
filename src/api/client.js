@@ -31,15 +31,6 @@ class ApiClient {
       
       // Verificar si la respuesta es válida
       if (!response.ok) {
-        // Manejo especial de error 401 (token expirado/inválido)
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
-        }
-        
         let errorMessage = `HTTP error! status: ${response.status}`;
         let errorData = null;
         
@@ -48,6 +39,17 @@ class ApiClient {
           errorMessage = errorData.error || errorData.message || errorMessage;
         } catch {
           // Si no se puede parsear el JSON, usar el mensaje por defecto
+        }
+        
+        // Manejo especial de error 401 (token expirado/inválido)
+        // IMPORTANTE: Solo limpiar localStorage y redirigir si NO es un intento de login
+        if (response.status === 401 && !endpoint.includes('/auth/login')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Solo redirigir si no estamos ya en la página de login
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login';
+          }
         }
         
         // Crear error con información completa
@@ -190,38 +192,48 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      const { status, data } = error.response;
+      const { status, data, config } = error.response;
       
       // Error 401: Token expirado o inválido
+      // IMPORTANTE: Solo limpiar y redirigir si NO es un intento de login
       if (status === 401) {
-        // Limpiar localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        const isLoginAttempt = config?.url?.includes('/auth/login') || config?.url?.includes('/auth/register');
         
-        // Redirigir al login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (!isLoginAttempt) {
+          // Limpiar localStorage solo si no es un intento de login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          // Redirigir al login solo si no estamos ya ahí
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login';
+          }
         }
+        // Si es un intento de login fallido, simplemente rechazar el error sin redirigir
       }
       
       // Error 403: Sin permisos
       else if (status === 403) {
-        }
+        console.warn('⚠️ Acceso denegado - Sin permisos suficientes');
+      }
       
       // Error 429: Rate limiting
       else if (status === 429) {
-        }
+        console.warn('⚠️ Demasiadas solicitudes - Rate limit excedido');
+      }
       
       // Otros errores del servidor
       else {
-        }
+        console.error('❌ Error del servidor:', status, data);
+      }
     } 
     else if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
       // Error de red - backend no disponible
-      } 
+      console.error('❌ Error de red - Backend no disponible');
+    } 
     else {
       // Otros errores
-      console.error('API error:', error.message);
+      console.error('❌ API error:', error.message);
     }
     
     return Promise.reject(error);
