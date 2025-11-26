@@ -2,13 +2,22 @@
 
 ## Fecha: 2025-11-26
 ## Prioridad: 🔴 Alta
+## Estado: ✅ URLs Corregidas - Ver FIX_MANAGE_ORDERS_URLS.md
 
 ---
 
-## ❌ Error Observado
+## ✅ UPDATE: URLs Corregidas
+
+**Las URLs ya fueron corregidas.** El problema era que se estaba usando `/api/manage/orders/pending` cuando debía ser `/manage/orders/pending`.
+
+Ver detalles completos en: `FIX_MANAGE_ORDERS_URLS.md`
+
+---
+
+## ❌ Error Observado (Histórico)
 
 ### Frontend:
-- Endpoint: `GET /api/manage/orders/pending`
+- Endpoint: `GET /manage/orders/pending` (corregido)
 - Error: 500 Internal Server Error
 - Mensaje en consola: "Cannot read properties of null"
 

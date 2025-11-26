@@ -453,24 +453,24 @@ export const ordersApi = {
 // ============================================
 export const manageOrdersApi = {
   // Obtener todas las órdenes pendientes
-  // RUTA: GET /api/manage/orders/pending
+  // RUTA: GET /api/admin/orders/pending
   // Requiere: ADMIN role
   getPendingOrders: () => {
-    return apiClient.get(`${API_BASE}/manage/orders/pending`);
+    return apiClient.get(`${API_BASE}/admin/orders/pending`);
   },
 
   // Obtener estado de una orden específica
-  // RUTA: GET /api/manage/orders/:orderId/status
+  // RUTA: GET /api/admin/orders/:orderId/status
   // Requiere: ADMIN role
   getOrderStatus: (orderId) => {
-    return apiClient.get(`${API_BASE}/manage/orders/${orderId}/status`);
+    return apiClient.get(`${API_BASE}/admin/orders/${orderId}/status`);
   },
 
   // Cancelar una orden pendiente
-  // RUTA: POST /api/manage/orders/:orderId/cancel
+  // RUTA: POST /api/admin/orders/:orderId/cancel
   // Requiere: ADMIN role
   cancelOrder: (orderId) => {
-    return apiClient.post(`${API_BASE}/manage/orders/${orderId}/cancel`);
+    return apiClient.post(`${API_BASE}/admin/orders/${orderId}/cancel`);
   }
 };
 

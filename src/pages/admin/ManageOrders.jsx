@@ -49,10 +49,36 @@ export default function ManageOrders() {
   const loadPendingOrders = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Cargando órdenes pendientes...');
+      
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      if (!token) {
+        message.error('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+      
+      if (user?.role !== 'ADMIN') {
+        message.error('No tienes permisos de administrador.');
+        return;
+      }
+      
+      // Verificar si el token está expirado
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            message.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Error verificando token');
+      }
       
       const response = await manageOrdersApi.getPendingOrders();
-      console.log('📦 Respuesta del backend:', response);
       
       // El backend puede devolver un array directamente o un objeto con data
       let ordersData = [];
@@ -63,9 +89,9 @@ export default function ManageOrders() {
         ordersData = response.data;
       } else if (response && Array.isArray(response.orders)) {
         ordersData = response.orders;
+      } else if (response && response.rows && Array.isArray(response.rows)) {
+        ordersData = response.rows;
       }
-      
-      console.log('✅ Órdenes procesadas:', ordersData.length);
       setOrders(ordersData);
       
       if (ordersData.length === 0) {
@@ -74,18 +100,15 @@ export default function ManageOrders() {
         message.success(`Se cargaron ${ordersData.length} órdenes pendientes`);
       }
     } catch (error) {
-      console.error('❌ Error cargando órdenes pendientes:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
+      console.error('Error cargando órdenes pendientes:', error.message);
       
       // Mostrar mensaje de error más específico
-      if (error.status === 401) {
+      if (error.status === 401 || error.message?.includes('401')) {
         message.error('No tienes permisos para ver las órdenes. Verifica que seas administrador.');
-      } else if (error.status === 500) {
-        message.error('Error en el servidor. Contacta al equipo de backend.');
+      } else if (error.status === 500 || error.message?.includes('500')) {
+        message.error('Error en el servidor. Verifica que el backend esté corriendo.');
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
+        message.error('No se puede conectar al servidor. Verifica que el backend esté corriendo en http://localhost:3000');
       } else {
         message.error(error.message || 'Error al cargar las órdenes pendientes');
       }

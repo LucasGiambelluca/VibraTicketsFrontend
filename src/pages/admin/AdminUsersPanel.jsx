@@ -144,11 +144,6 @@ const AdminUsersPanel = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Cargando usuarios con filtros:', {
-        filters,
-        page: pagination.page,
-        limit: pagination.limit
-      });
       
       const response = await adminUsersApi.listUsers({
         ...filters,
@@ -156,46 +151,33 @@ const AdminUsersPanel = () => {
         limit: pagination.limit
       });
       
-      console.log('📦 Respuesta del backend:', response);
-      console.log('🔑 Claves de la respuesta:', Object.keys(response || {}));
-      
       // Manejo flexible del shape de respuesta
       let usersList = [];
       let total = 0;
       let totalPages = undefined;
 
       if (response?.success && response?.data?.users) {
-        console.log('✅ Usando response.data.users');
         usersList = response.data.users;
         total = response.data?.pagination?.total ?? usersList.length;
         totalPages = response.data?.pagination?.totalPages;
       } else if (Array.isArray(response)) {
-        console.log('✅ Response es array directo');
         usersList = response;
         total = usersList.length;
       } else if (response?.users) {
-        console.log('✅ Usando response.users');
         usersList = response.users;
         total = response?.pagination?.total ?? usersList.length;
         totalPages = response?.pagination?.totalPages;
       } else if (response?.data) {
-        console.log('✅ Explorando response.data');
         const data = response.data;
         if (Array.isArray(data)) {
-          console.log('✅ response.data es array');
           usersList = data;
           total = usersList.length;
         } else if (Array.isArray(data?.users)) {
-          console.log('✅ Usando response.data.users');
           usersList = data.users;
           total = data?.pagination?.total ?? usersList.length;
           totalPages = data?.pagination?.totalPages;
         }
-      } else {
-        console.log('⚠️ No se pudo parsear la respuesta. Estructura desconocida.');
       }
-
-      console.log(`✅ Usuarios cargados: ${usersList.length}`, usersList);
       
       setUsers(usersList);
       setPagination(prev => ({
@@ -204,13 +186,7 @@ const AdminUsersPanel = () => {
         totalPages
       }));
     } catch (error) {
-      console.error('❌ Error cargando usuarios:', error);
-      console.error('❌ Error completo:', {
-        message: error.message,
-        response: error.response,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      console.error('Error cargando usuarios:', error.message);
       message.error(`Error al cargar usuarios: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);

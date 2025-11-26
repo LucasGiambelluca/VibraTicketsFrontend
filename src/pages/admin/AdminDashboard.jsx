@@ -385,7 +385,6 @@ function EventsAdmin() {
       // Refrescar lista
       await refetch();
     } catch (error) {
-      console.error('Error al actualizar evento:', error);
       message.error('Error al actualizar el evento');
     }
   };
@@ -405,10 +404,6 @@ function EventsAdmin() {
       message.success('Evento eliminado correctamente');
       await refetch();
     } catch (error) {
-      console.error('❌ Error al eliminar evento:', error);
-      console.error('❌ Error response:', error.response);
-      console.error('❌ Error data:', error.response?.data);
-      console.error('❌ Status code:', error.response?.status);
       
       let errorMsg = 'Error al eliminar el evento';
       
@@ -461,7 +456,6 @@ function EventsAdmin() {
       // Refrescar lista de eventos
       await refetch();
     } catch (error) {
-      console.error('Error al guardar estilos:', error);
       const errorMsg = error.response?.data?.message || 'Error al actualizar estilos del evento';
       message.error(errorMsg);
     } finally {
@@ -723,7 +717,6 @@ function EventsAdmin() {
           await showsApi.createSection(selectedShowId, sectionData);
           createdCount++;
           } catch (err) {
-          console.error(`❌ Error al crear sección ${section.name}:`, err);
           
           // ✅ Manejo de errores específicos del backend
           const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
@@ -774,7 +767,6 @@ function EventsAdmin() {
       // Refrescar lista de eventos
       refetch();
     } catch (e) {
-      console.error('❌ Error al asignar entradas:', e);
       if (e?.errorFields) return; // validation errors
       const errorMsg = e.response?.data?.message || e.message || 'Error al asignar entradas';
       message.error(errorMsg);
@@ -1480,7 +1472,6 @@ function ShowsAdmin() {
             return sum + (section.available_seats || 0);
           }, 0);
         } catch (err) {
-          console.error(`⚠️ Error cargando secciones del show ${show.id}:`, err);
           // Si falla, dejar en 0
           availableSeats = 0;
         }
@@ -1501,7 +1492,6 @@ function ShowsAdmin() {
       setShows(enrichedShows);
       setEvents(eventsList);
     } catch (err) {
-      console.error('❌ Error cargando shows:', err);
       setError(err.message || 'Error al cargar shows');
       message.error('Error al cargar shows');
     } finally {
@@ -1529,7 +1519,6 @@ function ShowsAdmin() {
         const dateStr = show.starts_at || show.startsAt;
         startsAtValue = dayjs(dateStr);
       } catch (e) {
-        console.error('❌ Error parseando fecha:', e);
       }
     }
     
@@ -1569,7 +1558,6 @@ function ShowsAdmin() {
       // Refrescar lista
       await loadAllShows();
     } catch (error) {
-      console.error('Error al actualizar show:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Error al actualizar el show';
       message.error(errorMsg);
     }
@@ -1594,11 +1582,6 @@ function ShowsAdmin() {
       message.success('Show eliminado correctamente');
       await loadAllShows();
     } catch (error) {
-      console.error('❌ Error al eliminar show:', error);
-      console.error('❌ Error response:', error.response);
-      console.error('❌ Error data:', error.response?.data);
-      console.error('❌ Status code:', error.response?.status);
-      console.error('❌ Headers enviados:', error.config?.headers);
       
       let errorMsg = 'Error al eliminar el show';
       
@@ -1670,7 +1653,6 @@ function ShowsAdmin() {
           await showsApi.createSection(selectedShow.id, sectionData);
           createdCount++;
           } catch (err) {
-          console.error(`❌ Error al crear sección ${section.name}:`, err);
           
           // Manejo específico de errores
           let errorMessage = err.message || 'Error desconocido';
@@ -1753,7 +1735,6 @@ function ShowsAdmin() {
       // Refrescar lista de shows
       loadAllShows();
     } catch (e) {
-      console.error('❌ Error al actualizar venue:', e);
       if (e?.errorFields) return;
       const errorMsg = e.response?.data?.message || e.message || 'Error al actualizar venue';
       message.error(errorMsg);
@@ -1801,7 +1782,6 @@ function ShowsAdmin() {
       // Refrescar lista de shows
       loadAllShows();
     } catch (e) {
-      console.error('❌ Error al actualizar sección:', e);
       if (e?.errorFields) return;
       const errorMsg = e.response?.data?.message || e.message || 'Error al actualizar sección';
       message.error(errorMsg);
@@ -1833,7 +1813,6 @@ function ShowsAdmin() {
       // Refrescar lista de shows
       loadAllShows();
     } catch (error) {
-      console.error('❌ Error al eliminar sección:', error);
       
       let errorMsg = 'Error al eliminar la sección';
       
@@ -2833,7 +2812,6 @@ function VenuesAdmin() {
       // Refrescar lista
       await refetch();
     } catch (error) {
-      console.error('Error al actualizar venue:', error);
       message.error('Error al actualizar el venue');
     }
   };
@@ -2852,7 +2830,6 @@ function VenuesAdmin() {
           message.success('Venue eliminado correctamente');
           await refetch();
         } catch (error) {
-          console.error('Error al eliminar venue:', error);
           message.error('Error al eliminar el venue');
         }
       }

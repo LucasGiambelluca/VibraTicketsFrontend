@@ -87,10 +87,6 @@ export default function MercadoPagoButton({
         })
       };
 
-      // 🔍 LOG para debug: Ver estructura del payer antes de enviar
-      console.log('📦 Payer payload a enviar:', JSON.stringify(payerPayload, null, 2));
-      console.log('💰 Monto total a pagar:', totalAmount);
-
       // 2) Crear preferencia de pago con orderId (nuevo requisito backend)
       const preferencePayload = {
         orderId: parseInt(orderId),
@@ -106,11 +102,6 @@ export default function MercadoPagoButton({
         preferencePayload.totalAmount = totalAmount;
         preferencePayload.totalCents = Math.round(totalAmount * 100); // En centavos
         preferencePayload.amount = totalAmount; // Formato alternativo
-        console.log('✅ Enviando monto total al backend:', {
-          totalAmount,
-          totalCents: Math.round(totalAmount * 100),
-          amount: totalAmount
-        });
       }
 
       const response = await paymentsApi.createPaymentPreference(preferencePayload, true);
@@ -125,9 +116,20 @@ export default function MercadoPagoButton({
         throw new Error('El backend no devolvió una URL de pago válida (init_point)');
       }
 
-      // Cerrar mensaje de loading
-      loadingMessage();
-      message.success('Redirigiendo a Mercado Pago...', 1.5);
+      // Obtener totalAmount del backend (viene en centavos)
+      const totalAmountFromBackend = response?.totalAmount;
+      
+      if (totalAmountFromBackend) {
+        const totalEnMoneda = (totalAmountFromBackend / 100).toFixed(2);
+        
+        // Mostrar el total final al usuario
+        loadingMessage();
+        message.success(`Total a pagar: $${totalEnMoneda}. Redirigiendo a Mercado Pago...`, 2);
+      } else {
+        // Si no viene totalAmount, usar el mensaje anterior
+        loadingMessage();
+        message.success('Redirigiendo a Mercado Pago...', 1.5);
+      }
 
       // Redirigir a Mercado Pago Checkout Pro
       setTimeout(() => {
@@ -139,18 +141,13 @@ export default function MercadoPagoButton({
           // Fallback: abrir en nueva pestaña
           window.open(initPoint, '_blank');
         }
-      }, 1500);
+      }, 2000);
 
     } catch (error) {
       // Cerrar mensaje de loading
       loadingMessage();
       
-      console.error('❌ Error creando preferencia de pago:', error);
-      try {
-        console.error('❌ Error response:', JSON.stringify(error.response, null, 2));
-      } catch {
-        console.error('❌ Error response (raw object):', error.response);
-      }
+      console.error('Error creando preferencia de pago:', error.message);
 
       let errorMessage = 'Error al procesar el pago. Por favor, intenta nuevamente.';
 

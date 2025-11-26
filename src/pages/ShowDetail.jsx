@@ -98,12 +98,6 @@ export default function ShowDetail() {
       // 🚨 VERIFICACIÓN CRÍTICA: ¿Los asientos 1 y 2 están en disponibles?
       const hasOne = availableSeats.some(s => String(s.id) === '1');
       const hasTwo = availableSeats.some(s => String(s.id) === '2');
-      if (hasOne || hasTwo) {
-        console.error('🚨 ERROR: Asientos 1 o 2 aún en la lista de disponibles!');
-        console.error('  - Asiento 1 disponible:', hasOne);
-        console.error('  - Asiento 2 disponible:', hasTwo);
-        console.error('  - soldSeatIds:', soldSeatIds);
-      }
       
       if (availableSeats.length === 0) {
         message.warning('No hay asientos disponibles en este momento. Pueden estar reservados por otros usuarios.');
@@ -114,7 +108,6 @@ export default function ShowDetail() {
       // ⭐ IMPORTANTE: Retornar los asientos para uso inmediato
       return availableSeats;
     } catch (seatsError) {
-      console.error('❌ Error al cargar asientos:', seatsError);
       setSeats([]);
       return [];
     }
@@ -144,7 +137,6 @@ export default function ShowDetail() {
           setHasQueueAccess(true);
         }
       } catch (error) {
-        console.error('Error verificando estado de cola:', error);
         // Si el endpoint no existe (404) o hay cualquier error, 
         // asumir que la cola NO está habilitada y permitir acceso directo (fail-open)
         setQueueEnabled(false);
@@ -204,7 +196,6 @@ export default function ShowDetail() {
                 setSectionQuantities(parsed);
                 message.info('Se recuperaron tus selecciones anteriores', 3);
               } catch (e) {
-                console.error('Error al parsear cantidades guardadas:', e);
                 // Inicializar en 0 si falla
                 const initialQuantities = sectionsList.reduce((acc, section) => ({ 
                   ...acc, 
@@ -224,14 +215,12 @@ export default function ShowDetail() {
             message.warning('Este show no tiene secciones configuradas. Contactá al organizador.');
           }
         } catch (sectionsError) {
-          console.error('❌ Error al cargar secciones:', sectionsError);
           message.error('No se pudieron cargar las secciones del show.');
         }
 
         // 4. Cargar ASIENTOS disponibles del SHOW
         await loadSeats();
       } catch (err) {
-        console.error('❌ Error al cargar datos del show:', err);
         setError(err.message || 'Error al cargar datos');
         message.error('No se pudo cargar la información del show.');
       } finally {
@@ -283,9 +272,6 @@ export default function ShowDetail() {
           // price_cents o priceCents dependiendo del backend
           const priceInCents = section.price_cents || section.priceCents || 0;
           totalPrice += quantity * (priceInCents / 100);
-        } else {
-          console.error(`  ❌ NO SE ENCONTRÓ la sección con ID ${sectionId}`);
-          console.error(`  📋 IDs disponibles en sections:`, sections.map(s => `${s.id} (${typeof s.id})`));
         }
       }
     }
@@ -309,7 +295,6 @@ export default function ShowDetail() {
           try {
             handleContinue();
           } catch (error) {
-            console.error('❌ Error al continuar después del login:', error);
             message.error('Hubo un error al procesar tu solicitud. Por favor, intentá nuevamente.');
           }
         }, 500);
@@ -334,8 +319,6 @@ export default function ShowDetail() {
           const section = sections.find(s => String(s.id) === String(sectionId));
           
           if (!section) {
-            console.error(`❌ No se encontró la sección con ID: ${sectionId}`);
-            console.error(`❌ IDs disponibles:`, sections.map(s => s.id));
             throw new Error(`No se encontró la sección con ID: ${sectionId}`);
           }
           
@@ -355,7 +338,6 @@ export default function ShowDetail() {
       
       // Verificar si hay asientos cargados
       if (!freshSeats || freshSeats.length === 0) {
-        console.error('❌ No hay asientos disponibles en el sistema');
         message.error('No hay asientos disponibles para este show. Pueden estar reservados por otros usuarios.');
         setCreatingHold(false);
         return;
@@ -369,7 +351,6 @@ export default function ShowDetail() {
       for (const selection of selectedSections) {
         // Validar que tenemos un sectionName válido
         if (!selection.sectionName || typeof selection.sectionName !== 'string' || selection.sectionName.trim() === '') {
-          console.error(`❌ Sección sin nombre válido:`, selection);
           message.error(`Error: No se pudo identificar la sección seleccionada (ID: ${selection.sectionId})`);
           setCreatingHold(false);
           return;
@@ -402,7 +383,6 @@ export default function ShowDetail() {
       
       // Verificar que se seleccionaron asientos
       if (selectedSeatIds.length === 0) {
-        console.error('❌ No se pudieron asignar asientos');
         message.error('No se pudieron asignar asientos. Por favor, intentá nuevamente o contactá al organizador.');
         setCreatingHold(false);
         return;
@@ -415,7 +395,6 @@ export default function ShowDetail() {
         const expiresAt = localStorage.getItem(`queue_access_${showId}_expires`);
         
         if (!accessToken || !expiresAt || new Date(expiresAt) < new Date()) {
-          console.error('❌ No hay accessToken válido o ha expirado');
           message.error('Tu acceso ha expirado. Debes unirte a la cola nuevamente.');
           setHasQueueAccess(false);
           setCreatingHold(false);
@@ -436,11 +415,6 @@ export default function ShowDetail() {
         holdData.accessToken = accessToken; // 🔐 Token de acceso de la cola virtual
       }
 
-      // Log con token ofuscado (opcional para debug)
-      console.log('🧾 Creando HOLD', {
-        ...holdData,
-        accessToken: accessToken ? '***' + accessToken.slice(-8) : 'N/A (cola no habilitada)'
-      });
       const holdResponse = await holdsApi.createHold(holdData);
       message.success(`¡Asientos reservados! Tenés ${holdResponse.ttlMinutes || 15} minutos para completar la compra.`, 5);
 
@@ -457,19 +431,8 @@ export default function ShowDetail() {
       // NO limpiar sessionStorage aquí - se limpiará después del pago exitoso
 
     } catch (error) {
-      console.error('❌ Error al crear hold:', error);
-      console.error('❌ Detalles completos del error:', {
-        message: error.message,
-        status: error.status,
-        response: error.response,
-        data: error.data,
-        url: error.url,
-        method: error.method,
-        stack: error.stack
-      });
- // Manejar errores de disponibilidad (409 Conflict)
+      // Manejar errores de disponibilidad (409 Conflict)
       if (error.status === 409 || error.message?.includes('409') || error.message?.includes('conflict')) {
-        console.error('❌ Conflicto 409 detectado');
         
         // Intentar parsear los asientos no disponibles del backend
         let unavailableInfo = '';
