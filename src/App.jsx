@@ -42,6 +42,7 @@ import Soporte from "./pages/Soporte";
 import SoporteTickets from "./pages/SoporteTickets";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsersPanel from "./pages/admin/AdminUsersPanel";
+import ManageOrders from "./pages/admin/ManageOrders";
 import MyHolds from "./pages/MyHolds";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
@@ -255,6 +256,14 @@ export default function App() {
               element={
                 <AdminRoute>
                   <AdminUsersPanel />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/orders" 
+              element={
+                <AdminRoute>
+                  <ManageOrders />
                 </AdminRoute>
               } 
             />

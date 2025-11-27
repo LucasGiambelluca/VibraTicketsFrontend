@@ -9,7 +9,9 @@ import {
   UserOutlined,
   LogoutOutlined,
   LoginOutlined,
-  UserAddOutlined
+  UserAddOutlined,
+  ShoppingCartOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useLoginModal } from '../contexts/LoginModalContext';
@@ -93,10 +95,33 @@ export default function HeaderNav() {
   }
 
   if (isAdmin || isOrganizer) {
+    const adminSubMenuItems = [
+      {
+        key: '/admin',
+        icon: <DashboardOutlined />,
+        label: <Link to="/admin">Dashboard</Link>
+      },
+      {
+        key: '/admin/orders',
+        icon: <ShoppingCartOutlined />,
+        label: <Link to="/admin/orders">Órdenes</Link>
+      }
+    ];
+    
+    // Solo admins pueden ver usuarios
+    if (isAdmin) {
+      adminSubMenuItems.push({
+        key: '/admin/users',
+        icon: <TeamOutlined />,
+        label: <Link to="/admin/users">Usuarios</Link>
+      });
+    }
+    
     menuItems.push({
-      key: '/admin',
+      key: 'admin',
       icon: <DashboardOutlined />,
-      label: <Link to="/admin">Admin</Link>
+      label: 'Admin',
+      children: adminSubMenuItems
     });
   }
 
