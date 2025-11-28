@@ -45,13 +45,8 @@ export default function PaymentFailure() {
   }, [status]);
 
   const handleRetry = () => {
-    // Si tenemos orderId, volver al checkout
-    if (orderId) {
-      navigate(`/checkout/${orderId}`);
-    } else {
-      // Si no, volver a la selección de asientos
-      navigate(-2);
-    }
+    // Volver a la página de eventos para reintentar el proceso completo
+    navigate('/events');
   };
 
   const getErrorMessage = () => {
@@ -160,7 +155,7 @@ export default function PaymentFailure() {
             borderRadius: 8,
             border: '1px solid #ffd591'
           }}>
-            <Text strong>💡 Consejos:</Text>
+            <Text strong>Consejos:</Text>
             <ul style={{ marginTop: 8, marginBottom: 0 }}>
               <li>Verificá que los datos de tu tarjeta sean correctos</li>
               <li>Asegurate de tener fondos suficientes</li>

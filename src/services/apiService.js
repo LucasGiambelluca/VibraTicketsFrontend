@@ -34,6 +34,48 @@ export const authApi = {
   facebookLogin: (data) => {
     // data: { accessToken: "facebook-access-token", userID: "facebook-user-id" }
     return apiClient.post(`${API_BASE}/auth/facebook`, data);
+  },
+
+  // ============================================
+  // SISTEMA DE RECUPERACIÓN DE CONTRASEÑA CON CÓDIGOS NUMÉRICOS
+  // ============================================
+  
+  // 1. Solicitar código de recuperación (6 dígitos, expira en 60s)
+  requestPasswordReset: (email) => {
+    // email: string
+    // Response: { success: true, message: string, expiresIn: 60 }
+    return apiClient.post(`${API_BASE}/password-reset/request`, { email });
+  },
+
+  // 2. Verificar código (opcional - puede verificarse directamente en reset)
+  verifyResetCode: (email, code) => {
+    // email: string, code: string (6 dígitos)
+    // Response: { success: true, message: string, valid: true }
+    return apiClient.post(`${API_BASE}/password-reset/verify`, { email, code });
+  },
+
+  // 3. Restablecer contraseña con código
+  resetPasswordWithCode: (email, code, newPassword) => {
+    // email: string, code: string (6 dígitos), newPassword: string
+    // Response: { success: true, message: "Contraseña restablecida exitosamente" }
+    return apiClient.post(`${API_BASE}/password-reset/reset`, { email, code, newPassword });
+  },
+  
+  // ENDPOINTS DEPRECADOS (mantener por compatibilidad temporal)
+  forgotPassword: (email) => {
+    console.warn('[DEPRECADO] Usa requestPasswordReset() en su lugar');
+    return apiClient.post(`${API_BASE}/password-reset/request`, { email });
+  },
+  
+  resetPassword: (data) => {
+    console.warn('[DEPRECADO] Usa resetPasswordWithCode() en su lugar');
+    const { email, code, newPassword } = data;
+    return apiClient.post(`${API_BASE}/password-reset/reset`, { email, code, newPassword });
+  },
+
+  // Verify Reset Token - Verificar si un token es válido (opcional)
+  verifyResetToken: (token) => {
+    return apiClient.post(`${API_BASE}/auth/verify-reset-token`, { token });
   }
 };
 
@@ -469,6 +511,7 @@ export const manageOrdersApi = {
   // Cancelar una orden pendiente
   // RUTA: POST /api/admin/orders/:orderId/cancel
   // Requiere: ADMIN role
+  // ✅ BACKEND YA IMPLEMENTADO - Endpoint funcional
   cancelOrder: (orderId) => {
     return apiClient.post(`${API_BASE}/admin/orders/${orderId}/cancel`);
   }
@@ -506,6 +549,13 @@ export const ticketsApi = {
   // RUTA: DELETE /api/tickets/reservations/:id
   cancelReservation: (reservationId) => {
     return apiClient.delete(`${API_BASE}/tickets/reservations/${reservationId}`);
+  },
+
+  // Consultar disponibilidad de tickets para un evento
+  // RUTA: GET /api/tickets/available/:eventId
+  // Requiere autenticación - Retorna cuántos boletos puede comprar el usuario
+  getAvailability: (eventId) => {
+    return apiClient.get(`${API_BASE}/tickets/available/${eventId}`);
   }
 };
 
@@ -623,6 +673,12 @@ export const reportsApi = {
   getEventsReport: (params = {}) => {
     // params: { status?, dateFrom?, dateTo? }
     return apiClient.get(`${API_BASE}/reports/events`, params);
+  },
+
+  // Reporte Financiero (Nuevo)
+  getFinancialReport: (params = {}) => {
+    // params: { dateFrom?, dateTo?, eventId? }
+    return apiClient.get(`${API_BASE}/reports/financial`, params);
   }
 };
 

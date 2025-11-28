@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Button, Form, Input, Select, Row, Col, Divider, message, Alert, Spin, Statistic, Tag } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, Typography, Space, Button, Form, Input, Select, Row, Col, Divider, message, Alert, Spin, Steps, Statistic } from 'antd';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ClockCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, ShoppingCartOutlined, TagOutlined, CreditCardOutlined, CheckCircleOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
-import { holdsApi, paymentsApi, ordersApi } from '../services/apiService';
+import { holdsApi } from '../services/apiService';
 import MercadoPagoButton from '../components/MercadoPagoButton';
+import DiscountCodeAdvanced from '../components/checkout/DiscountCodeAdvanced';
+import OrderSummary from '../components/checkout/OrderSummary';
+import CountdownTimer from '../components/checkout/CountdownTimer';
 
 const { Title, Text } = Typography;
 
@@ -13,22 +16,20 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   
   // Hooks
   const { user } = useAuth();
 
   // Estados del hold y orden
   const [holdData, setHoldData] = useState(location.state?.holdData || null);
-  const [orderData, setOrderData] = useState(null);
   const [loadingHold, setLoadingHold] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   
-  // Datos del show y evento desde el state
-  const show = location.state?.show || null;
-  const event = location.state?.event || null;
+  // Se obtendrán del holdData para mayor fiabilidad
+  const [show, setShow] = useState(location.state?.show || null);
+  const [event, setEvent] = useState(location.state?.event || null);
   
-  // 🔧 FIX: Obtener holdId de params o del state
   const holdId = holdIdParam || location.state?.holdId || holdData?.holdId;
   
   // Cargar datos del hold al montar el componente
@@ -36,19 +37,18 @@ export default function Checkout() {
     const loadHoldData = async () => {
       try {
         setLoadingHold(true);
-        
-        // 🚨 VALIDACIÓN: Verificar que holdId existe
         if (!holdId) {
-          console.error('❌ ERROR: holdId es undefined o null');
-          message.error('No se encontró el ID de la reserva. Por favor, intenta nuevamente.');
-          setTimeout(() => navigate('/'), 3000);
+          message.error('No se encontró el ID de la reserva.');
+          setTimeout(() => navigate('/events'), 3000);
           return;
         }
         
         const response = await holdsApi.getHold(holdId);
         setHoldData(response);
+
+        if (response.show) setShow(response.show);
+        if (response.event) setEvent(response.event);
         
-        // Calcular tiempo restante
         if (response.expiresAt || response.expires_at) {
           const expiresAt = new Date(response.expiresAt || response.expires_at);
           const now = new Date();
@@ -58,7 +58,6 @@ export default function Checkout() {
       } catch (error) {
         console.error('❌ Error cargando hold:', error);
         message.error('No se pudo cargar la información de la reserva.');
-        // Redirigir de vuelta si el hold no existe o expiró
         setTimeout(() => navigate('/'), 3000);
       } finally {
         setLoadingHold(false);
@@ -69,14 +68,12 @@ export default function Checkout() {
       loadHoldData();
     } else if (holdData) {
       setLoadingHold(false);
-      }
+    }
   }, [holdId, holdData, navigate]);
-
 
   // Countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return;
-
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -88,33 +85,29 @@ export default function Checkout() {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [timeLeft, navigate]);
 
-  // Calcular totales desde el hold
-  const calculateTotals = () => {
-    if (!holdData) {
-      return { subtotal: 0, serviceCharge: 0, total: 0 };
-    }
-    
-    // Soporte para snake_case y camelCase
+  // Calcular totales (Memoized)
+  const { subtotal, serviceCharge, discountAmount, total } = useMemo(() => {
+    if (!holdData) return { subtotal: 0, serviceCharge: 0, discountAmount: 0, total: 0 };
+
     const totalCents = holdData.totalCents || holdData.total_cents || 0;
-    
-    if (!totalCents) {
-      return { subtotal: 0, serviceCharge: 0, total: 0 };
-    }
-    
-    const subtotal = totalCents / 100;
-    const serviceCharge = Math.round(subtotal * 0.15);
-    const total = subtotal + serviceCharge;
-    
-    return { subtotal, serviceCharge, total };
-  };
+    if (!totalCents) return { subtotal: 0, serviceCharge: 0, discountAmount: 0, total: 0 };
 
-  const { subtotal, serviceCharge, total } = calculateTotals();
+    const subtotalCalc = totalCents / 100;
+    const serviceChargeCalc = Math.round(subtotalCalc * 0.15); 
+    const discountAmountCalc = appliedDiscount?.discountAmount || 0;
+    const totalCalc = (subtotalCalc + serviceChargeCalc) - discountAmountCalc;
 
-  // Preparar datos del pagador para el botón de Mercado Pago
+    return { 
+      subtotal: subtotalCalc, 
+      serviceCharge: serviceChargeCalc, 
+      discountAmount: discountAmountCalc, 
+      total: totalCalc 
+    };
+  }, [holdData, appliedDiscount]);
+
   const getPayerInfo = () => {
     const formValues = form.getFieldsValue();
     return {
@@ -128,202 +121,60 @@ export default function Checkout() {
     };
   };
 
-  // Handler de error del botón de Mercado Pago
   const handlePaymentError = (error) => {
     console.error('❌ Error en pago:', error);
-    // 401: No autenticado
     if (error.response?.status === 401 || error.status === 401) {
       setTimeout(() => navigate('/login'), 2000);
-    }
-    // 409: Conflictos (asientos en otra orden, hold expirado/usado)
-    else if (error.response?.status === 409 || error.status === 409) {
-      const errCode = error.response?.error || error.error;
-      if (errCode === 'SeatsInOtherOrders') {
-        const seats = error.response?.seats || [];
-        const seatList = seats.map(s => s.seatId || s.id).join(', ');
-        message.error(`Algunos asientos ya están en otra orden activa (${seatList}). Te llevamos de vuelta para que elijas otros.`, 5);
-        setTimeout(() => navigate(-1), 1800);
-      } else if (errCode === 'HoldExpired') {
-        message.error('Tu reserva temporal (HOLD) expiró. Volvé a seleccionar asientos.', 4);
-        setTimeout(() => navigate(-1), 1500);
-      } else if (errCode === 'HoldAlreadyUsed') {
-        message.error('El HOLD ya fue utilizado para crear una orden. Recargá o volvé a seleccionar.', 4);
-        setTimeout(() => navigate(-1), 1500);
-      } else {
-        message.error('Conflicto al procesar tu compra. Volviendo al paso anterior...', 4);
-        setTimeout(() => navigate(-1), 1500);
-      }
-    }
-    // 404: Recurso no encontrado (hold/order)
-    else if (error.response?.status === 404 || error.status === 404) {
-      message.error('No encontramos la reserva/orden. Volviendo al inicio...', 4);
-      setTimeout(() => navigate('/'), 3000);
+    } else if (error.response?.status === 409 || error.status === 409) {
+      message.error('Conflicto con la reserva. Por favor intenta nuevamente.', 4);
+      setTimeout(() => navigate(-1), 1500);
+    } else {
+      message.error('Error al procesar el pago. Intenta nuevamente.', 4);
     }
   };
 
-
-  // Mostrar spinner mientras se carga el hold
   if (loadingHold) {
     return (
-      <div style={{ padding: 24, textAlign: 'center', minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
         <Spin size="large" />
-        <div style={{ marginTop: 16 }}>
-          <Text>Cargando información de la reserva...</Text>
-        </div>
+        <Text style={{ marginTop: 16 }}>Preparando tu compra...</Text>
       </div>
     );
   }
 
-  // Si no hay holdData, mostrar error
-  if (!holdData) {
-    return (
-      <div style={{ padding: 24, textAlign: 'center', minHeight: '60vh' }}>
-        <Alert
-          message="Reserva no encontrada"
-          description="No se pudo cargar la información de la reserva. Por favor, intentá nuevamente."
-          type="error"
-          showIcon
-        />
-        <Button type="primary" onClick={() => navigate('/')} style={{ marginTop: 16 }}>
-          Volver al inicio
-        </Button>
-      </div>
-    );
-  }
+  if (!holdData) return null;
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-
-      {/* Countdown de expiración */}
-      {timeLeft > 0 && (
-        <Alert
-          message={
-            <Space>
-              <ClockCircleOutlined />
-              <span>Tu reserva expira en:</span>
-              <Statistic.Countdown 
-                value={Date.now() + timeLeft * 1000} 
-                format="mm:ss"
-                valueStyle={{ fontSize: 16, color: timeLeft < 300 ? '#ff4d4f' : '#52c41a' }}
-              />
-            </Space>
-          }
-          type={timeLeft < 300 ? 'warning' : 'info'}
-          showIcon
-          style={{ marginBottom: 24 }}
+    <div className="fade-in" style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+      
+      {/* Header Steps */}
+      <div style={{ marginBottom: '32px' }}>
+        <Steps 
+          current={2} 
+          items={[
+            { title: 'Selección', icon: <ShoppingCartOutlined /> },
+            { title: 'Revisión', icon: <CheckCircleOutlined /> },
+            { title: 'Pago', icon: <CreditCardOutlined /> },
+          ]}
+          style={{
+            padding: '24px',
+            background: 'rgba(255, 255, 255, 0.6)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+          }}
         />
-      )}
+      </div>
 
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={12}>
-          <Card title="Resumen de la orden">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              {event && (
-                <div>
-                  <Text strong>Evento:</Text> <Text>{event.name}</Text>
-                </div>
-              )}
-              
-              {show && (
-                <div>
-                  <Text strong>Fecha:</Text> <Text>
-                    {new Date(show.startsAt || show.starts_at).toLocaleDateString('es-AR', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Text>
-                </div>
-              )}
-              
-              {event && (
-                <div>
-                  <Text strong>Venue:</Text> <Text>{event.venue_name || event.venueName || 'N/A'}</Text>
-                </div>
-              )}
-              
-              <Divider />
-              
-              <div>
-                <Text strong>Asientos reservados:</Text>
-                <div style={{ marginTop: 8 }}>
-                  {(() => {
-                    // Soporte para diferentes estructuras de respuesta
-                    const items = holdData.items || holdData.seats || [];
-                    if (items.length > 0) {
-                      return (
-                        <div>
-                          <Text>Cantidad: {items.length} asientos</Text>
-                          <br />
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            IDs: {items.map(item => item.seatId || item.seat_id || item.id || item).join(', ')}
-                          </Text>
-                        </div>
-                      );
-                    }
-                    
-                    // Fallback: mostrar info del holdData completo
-                    return (
-                      <div>
-                        <Text type="secondary">Cargando información de asientos...</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          Hold ID: {holdData.id || holdData.holdId || holdId}
-                        </Text>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              
-              <Divider />
-              
-              {/* Desglose de precios */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text>Subtotal:</Text>
-                  <Text>${subtotal.toLocaleString()}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text>Cargo por servicios (15%):</Text>
-                  <Text>${serviceCharge.toLocaleString()}</Text>
-                </div>
-              </div>
-              
-              <Divider />
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                fontSize: 18,
-                fontWeight: 'bold',
-                padding: '12px 0',
-                background: '#f0f0f0',
-                borderRadius: 8,
-                paddingLeft: 12,
-                paddingRight: 12
-              }}>
-                <Text strong>Total a pagar:</Text>
-                <Text strong style={{ color: '#52c41a' }}>${total.toLocaleString()}</Text>
-              </div>
-            </Space>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={12}>
-          <Card 
-            title="Información de pago"
-          >
-            <Alert
-              message="Pago Seguro con Mercado Pago"
-              description="Serás redirigido a Mercado Pago para completar tu pago de forma segura. Aceptamos tarjetas de crédito, débito, efectivo y otros medios de pago."
-              type="info"
-              showIcon
-              style={{ marginBottom: 24 }}
-            />
-
+      <Row gutter={[32, 32]}>
+        {/* Left Column: Payment Form */}
+        <Col xs={24} lg={14} order={2} lgOrder={1}>
+          <div className="glass-card" style={{ padding: '32px' }}>
+            <Title level={3} style={{ marginBottom: '24px', display: 'flex', alignItems: 'center' }}>
+              <LockOutlined style={{ marginRight: '12px', color: '#52c41a' }} />
+              Datos de Facturación
+            </Title>
+            
             <Form
               form={form}
               layout="vertical"
@@ -336,55 +187,29 @@ export default function Checkout() {
             >
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item
-                    label="Nombre"
-                    name="name"
-                    rules={[{ required: true, message: 'Ingresá tu nombre' }]}
-                  >
+                  <Form.Item label="Nombre" name="name" rules={[{ required: true, message: 'Requerido' }]}>
                     <Input placeholder="Juan" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item
-                    label="Apellido"
-                    name="surname"
-                    rules={[{ required: true, message: 'Ingresá tu apellido' }]}
-                  >
+                  <Form.Item label="Apellido" name="surname" rules={[{ required: true, message: 'Requerido' }]}>
                     <Input placeholder="Pérez" />
                   </Form.Item>
                 </Col>
               </Row>
 
-              <Form.Item
-                label="Email"
-                name="email"
-                rules={[
-                  { required: true, message: 'Ingresá tu email' },
-                  { type: 'email', message: 'Email inválido' }
-                ]}
-              >
+              <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}>
                 <Input placeholder="tu@email.com" />
               </Form.Item>
 
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item
-                    label="Cód. Área"
-                    name="areaCode"
-                    rules={[{ required: true, message: 'Requerido' }]}
-                  >
+                  <Form.Item label="Cód. Área" name="areaCode" rules={[{ required: true }]}>
                     <Input placeholder="11" maxLength={4} />
                   </Form.Item>
                 </Col>
                 <Col span={16}>
-                  <Form.Item
-                    label="Teléfono"
-                    name="phone"
-                    rules={[
-                      { required: true, message: 'Ingresá tu teléfono' },
-                      { pattern: /^[0-9]{7,10}$/, message: '7-10 dígitos' }
-                    ]}
-                  >
+                  <Form.Item label="Teléfono" name="phone" rules={[{ required: true }]}>
                     <Input placeholder="12345678" maxLength={10} />
                   </Form.Item>
                 </Col>
@@ -392,29 +217,15 @@ export default function Checkout() {
 
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item
-                    label="Tipo Doc."
-                    name="idType"
-                    rules={[{ required: true }]}
-                  >
+                  <Form.Item label="Tipo Doc." name="idType" rules={[{ required: true }]}>
                     <Select>
                       <Select.Option value="DNI">DNI</Select.Option>
                       <Select.Option value="CI">CI</Select.Option>
-                      <Select.Option value="LC">LC</Select.Option>
-                      <Select.Option value="LE">LE</Select.Option>
-                      <Select.Option value="Otro">Otro</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
                 <Col span={16}>
-                  <Form.Item
-                    label="Número de Documento"
-                    name="idNumber"
-                    rules={[
-                      { required: true, message: 'Ingresá tu documento' },
-                      { pattern: /^[0-9]{7,8}$/, message: '7-8 dígitos' }
-                    ]}
-                  >
+                  <Form.Item label="Número" name="idNumber" rules={[{ required: true }]}>
                     <Input placeholder="12345678" maxLength={8} />
                   </Form.Item>
                 </Col>
@@ -422,35 +233,78 @@ export default function Checkout() {
 
               <Divider />
 
-              <div style={{ marginTop: 24 }}>
-                <Space direction="vertical" style={{ width: '100%' }} size="large">
-                  <Button onClick={() => navigate(-1)} block size="large">
-                    Volver
-                  </Button>
-                  
-                  <Form.Item
-                    shouldUpdate
-                    style={{ marginBottom: 0 }}
-                  >
-                    {() => {
-                      const hasErrors = form.getFieldsError().some(({ errors }) => errors.length > 0);
-                      const allFieldsTouched = form.isFieldsTouched(true);
-                      
-                      return (
-                        <MercadoPagoButton
-                          holdId={holdId}
-                          payer={getPayerInfo()}
-                          totalAmount={total}
-                          onError={handlePaymentError}
-                        />
-                      );
-                    }}
-                  </Form.Item>
+              <Alert
+                message="Pago Seguro"
+                description="Tus datos están protegidos. Serás redirigido a Mercado Pago para completar la transacción."
+                type="success"
+                showIcon
+                icon={<SafetyCertificateOutlined />}
+                style={{ marginBottom: '24px', background: 'rgba(82, 196, 26, 0.1)', border: '1px solid #b7eb8f' }}
+              />
 
-                </Space>
-              </div>
+              <Form.Item shouldUpdate style={{ marginBottom: 0 }}>
+                {() => (
+                  <MercadoPagoButton
+                    holdId={holdId}
+                    payer={getPayerInfo()}
+                    totalAmount={total}
+                    discountCode={appliedDiscount?.code}
+                    discountAmount={discountAmount}
+                    onError={handlePaymentError}
+                  />
+                )}
+              </Form.Item>
             </Form>
-          </Card>
+          </div>
+        </Col>
+
+        {/* Right Column: Summary & Discount */}
+        <Col xs={24} lg={10} order={1} lgOrder={2}>
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            
+            {/* Timer Card */}
+            <div className="glass-card" style={{ padding: '24px', textAlign: 'center', borderLeft: '4px solid #faad14' }}>
+              <Text type="secondary">Tiempo restante para completar la compra</Text>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#faad14', marginTop: '8px' }}>
+                <ClockCircleOutlined style={{ marginRight: '8px' }} />
+                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{ padding: '24px', background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <Title level={4} style={{ margin: 0 }}>Resumen de Compra</Title>
+              </div>
+              <div style={{ padding: '24px' }}>
+                <OrderSummary 
+                  event={event}
+                  show={show}
+                  seats={holdData?.items || holdData?.seats || []}
+                  holdData={holdData}
+                  subtotal={subtotal}
+                  serviceCharge={serviceCharge}
+                  discountAmount={discountAmount}
+                  total={total}
+                />
+              </div>
+            </div>
+
+            {/* Discount Code */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <DiscountCodeAdvanced
+                orderTotal={Math.round(subtotal * 100)} // IMPORTANTE: El descuento se calcula solo sobre el subtotal (sin service charge)
+                // Usar IDs del holdData como fuente de verdad
+                eventId={holdData?.eventId || event?.id}
+                showId={holdData?.showId || show?.id}
+                onDiscountApplied={setAppliedDiscount}
+                onDiscountRemoved={() => setAppliedDiscount(null)}
+                userId={user?.id}
+              />
+            </div>
+
+
+          </Space>
         </Col>
       </Row>
     </div>

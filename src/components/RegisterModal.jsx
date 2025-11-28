@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, Button, Space, message, Alert, Typography, Row, Col } from 'antd';
+import { Modal, Form, Input, Button, Space, message, Alert, Typography, Row, Col, Tooltip } from 'antd';
+import { IdcardOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useRegisterModal } from '../contexts/RegisterModalContext';
+import { validateDNI } from '../utils/validators';
 import logo from '../assets/VibraTicketLogo2.png';
 
 const { Title, Text } = Typography;
@@ -28,6 +30,7 @@ export default function RegisterModal() {
         password: values.password,
         name: `${values.firstName} ${values.lastName}`,
         phone: values.phone,
+        dni: values.dni, // ✅ NUEVO: DNI obligatorio
         role: 'CUSTOMER'
       };
       
@@ -183,6 +186,46 @@ export default function RegisterModal() {
             style={{ 
               borderRadius: 8,
               padding: '10px 12px'
+            }}
+          />
+        </Form.Item>
+
+        {/* DNI - NUEVO CAMPO OBLIGATORIO */}
+        <Form.Item
+          label={
+            <span style={{ fontWeight: 500, color: '#333' }}>
+              DNI{' '}
+              <Tooltip title="Documento Nacional de Identidad - Requerido para validar compras (máximo 5 boletos por evento)">
+                <InfoCircleOutlined style={{ color: '#1890ff', fontSize: '12px' }} />
+              </Tooltip>
+            </span>
+          }
+          name="dni"
+          rules={[
+            { required: true, message: 'El DNI es obligatorio' },
+            {
+              validator: async (_, value) => {
+                if (!value) return;
+                const validation = validateDNI(value);
+                if (!validation.valid) {
+                  throw new Error(validation.error);
+                }
+              }
+            }
+          ]}
+        >
+          <Input 
+            prefix={<IdcardOutlined style={{ color: '#bfbfbf' }} />}
+            placeholder="12345678"
+            maxLength={8}
+            style={{ 
+              borderRadius: 8,
+              padding: '10px 12px'
+            }}
+            onChange={(e) => {
+              // Solo permitir números
+              const value = e.target.value.replace(/\D/g, '');
+              form.setFieldsValue({ dni: value });
             }}
           />
         </Form.Item>

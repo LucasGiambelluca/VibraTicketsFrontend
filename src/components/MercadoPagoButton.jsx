@@ -9,7 +9,9 @@ import { paymentsApi, ordersApi } from '../services/apiService';
  * @param {Object} props
  * @param {number|string} props.holdId - ID del hold/reserva
  * @param {Object} props.payer - Información del pagador (name, surname, email, phone, etc.)
- * @param {number} props.totalAmount - Monto total a pagar (incluyendo service charge)
+ * @param {number} props.totalAmount - Monto total a pagar (incluyendo service charge y descuentos)
+ * @param {string} props.discountCode - Código de descuento aplicado (opcional)
+ * @param {number} props.discountAmount - Monto del descuento aplicado (opcional)
  * @param {Function} props.onError - Callback opcional para manejar errores
  * @param {string} props.size - Tamaño del botón ('small', 'middle', 'large')
  * @param {boolean} props.block - Si el botón ocupa todo el ancho
@@ -18,6 +20,8 @@ export default function MercadoPagoButton({
   holdId, 
   payer,
   totalAmount,
+  discountCode,
+  discountAmount,
   onError,
   size = 'large',
   block = true 
@@ -25,8 +29,16 @@ export default function MercadoPagoButton({
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
+    console.log('=== INICIO PROCESO DE PAGO ===');
+    console.log('holdId recibido:', holdId);
+    console.log('payer recibido:', payer);
+    console.log('totalAmount:', totalAmount);
+    console.log('💰 DESCUENTO - discountCode:', discountCode);
+    console.log('💰 DESCUENTO - discountAmount:', discountAmount);
+    
     if (!holdId) {
       const error = new Error('No se proporcionó un ID de reserva válido');
+      console.error('ERROR: holdId no válido');
       message.error(error.message);
       if (onError) onError(error);
       return;
@@ -34,6 +46,7 @@ export default function MercadoPagoButton({
 
     if (!payer || !payer.email) {
       const error = new Error('Debe proporcionar información del pagador');
+      console.error('ERROR: Información del pagador inválida');
       message.error(error.message);
       if (onError) onError(error);
       return;
@@ -43,10 +56,39 @@ export default function MercadoPagoButton({
     const loadingMessage = message.loading('Creando preferencia de pago...', 0);
 
     try {
-      // 1) Crear ORDER desde el HOLD (requerido por backend)
-      const orderResp = await ordersApi.createOrder({ holdId: parseInt(holdId) }, true);
+      // Paso 1: Crear orden con descuento opcional
+      
+      // 1) Crear ORDER desde el HOLD con descuento opcional (según guía oficial)
+      const createOrderPayload = { 
+        holdId: parseInt(holdId)
+      };
+      
+      // Agregar código de descuento si existe
+      // Enviar en AMBOS formatos para compatibilidad
+      if (discountCode && discountCode.trim()) {
+        const codeFormatted = discountCode.trim().toUpperCase();
+        createOrderPayload.discountCode = codeFormatted;  // camelCase
+        createOrderPayload.discount_code = codeFormatted; // snake_case
+        console.log('✅ Código de descuento agregado al payload:', codeFormatted);
+      } else {
+        console.log('⚠️ No hay código de descuento para aplicar');
+      }
+      
+      console.log('📦 Payload para crear orden:', JSON.stringify(createOrderPayload, null, 2));
+      
+      const orderResp = await ordersApi.createOrder(createOrderPayload, true);
+      
+      console.log('📥 Respuesta del backend al crear orden:');
+      console.log('- orderId:', orderResp?.id || orderResp?.orderId);
+      console.log('- totalCents:', orderResp?.totalCents || orderResp?.total_cents);
+      console.log('- subtotalCents:', orderResp?.subtotalCents || orderResp?.subtotal_cents);
+      console.log('- discountApplied:', orderResp?.discount);
+      console.log('- Respuesta completa:', JSON.stringify(orderResp, null, 2));
+      
       const orderId = orderResp?.id || orderResp?.orderId || orderResp?.data?.id || orderResp?.data?.orderId;
+      
       if (!orderId) {
+        console.error('ERROR: No se pudo extraer orderId de la respuesta:', orderResp);
         throw new Error('No se pudo crear la orden. Intentalo nuevamente.');
       }
 
@@ -87,33 +129,37 @@ export default function MercadoPagoButton({
         })
       };
 
-      // 2) Crear preferencia de pago con orderId (nuevo requisito backend)
+      // 2) Crear preferencia de pago con orderId
+      // IMPORTANTE: El backend lee el descuento desde la orden.
+      // NO enviar discountAmount ni totalAmount aquí.
       const preferencePayload = {
         orderId: parseInt(orderId),
         payer: payerPayload,
-        customerEmail: payer.email, // 🔧 Workaround: backend espera customerEmail como campo separado
+        customerEmail: payer.email,
         customerName: `${payer.name || 'Usuario'} ${payer.surname || 'VibraTicket'}`,
         backUrls
       };
 
-      // Si se proporciona totalAmount, incluirlo en el payload en múltiples formatos
-      // para maximizar compatibilidad con el backend
-      if (totalAmount && totalAmount > 0) {
-        preferencePayload.totalAmount = totalAmount;
-        preferencePayload.totalCents = Math.round(totalAmount * 100); // En centavos
-        preferencePayload.amount = totalAmount; // Formato alternativo
-      }
-
+      // El descuento ya está aplicado en la orden.
+      // El backend calculará el total correcto automáticamente.
+      
       const response = await paymentsApi.createPaymentPreference(preferencePayload, true);
       
       // Obtener init_point (URL de redirección a MercadoPago)
+      // Intentar múltiples ubicaciones posibles en el response
       const initPoint = response?.initPoint || 
                        response?.init_point || 
                        response?.sandboxInitPoint || 
-                       response?.sandbox_init_point;
+                       response?.sandbox_init_point ||
+                       response?.data?.initPoint ||
+                       response?.data?.init_point ||
+                       response?.data?.sandboxInitPoint ||
+                       response?.data?.sandbox_init_point ||
+                       response?.preference?.initPoint ||
+                       response?.preference?.init_point;
 
       if (!initPoint) {
-        throw new Error('El backend no devolvió una URL de pago válida (init_point)');
+        throw new Error('No se pudo obtener el enlace de pago. Intentá nuevamente.');
       }
 
       // Obtener totalAmount del backend (viene en centavos)
@@ -131,23 +177,12 @@ export default function MercadoPagoButton({
         message.success('Redirigiendo a Mercado Pago...', 1.5);
       }
 
-      // Redirigir a Mercado Pago Checkout Pro
-      setTimeout(() => {
-        try {
-          window.location.href = initPoint;
-          } catch (redirectError) {
-          console.error('❌ Error al intentar redirigir:', redirectError);
-          message.error('Error al redirigir a MercadoPago. Intenta abrir en nueva pestaña.');
-          // Fallback: abrir en nueva pestaña
-          window.open(initPoint, '_blank');
-        }
-      }, 2000);
+      // Paso 3: Redirigir a MercadoPago
+      window.location.href = initPoint;
 
     } catch (error) {
       // Cerrar mensaje de loading
       loadingMessage();
-      
-      console.error('Error creando preferencia de pago:', error.message);
 
       let errorMessage = 'Error al procesar el pago. Por favor, intenta nuevamente.';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty } from 'antd';
+import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty, Alert } from 'antd';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 import { showsApi, eventsApi, holdsApi, queueApi } from '../services/apiService';
@@ -233,6 +233,17 @@ export default function ShowDetail() {
   const handleQuantityChange = (sectionId, newQuantity) => {
     // Normalizar sectionId a string para consistencia
     const normalizedId = String(sectionId);
+    
+    // Calcular el total de tickets si aplicamos este cambio
+    const newQuantities = { ...sectionQuantities, [normalizedId]: newQuantity };
+    const newTotal = Object.values(newQuantities).reduce((sum, qty) => sum + qty, 0);
+    
+    // ⚠️ VALIDACIÓN: Máximo 5 tickets por evento
+    if (newTotal > 5) {
+      message.warning('Máximo 5 boletos por evento por persona', 3);
+      return;
+    }
+    
     setSectionQuantities(prev => {
       const updated = { ...prev, [normalizedId]: newQuantity };
       
@@ -282,6 +293,12 @@ export default function ShowDetail() {
   const handleContinue = async () => {
     if (totalTickets === 0) {
       message.warning('Debes seleccionar al menos una entrada.');
+      return;
+    }
+    
+    // ⚠️ VALIDACIÓN ADICIONAL: Máximo 5 tickets por evento
+    if (totalTickets > 5) {
+      message.error('No podés comprar más de 5 boletos por evento');
       return;
     }
 
@@ -543,7 +560,29 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
             </Button>
           )}
         >
-          <Title level={3} style={{ marginBottom: 24 }}>Seleccioná tus entradas</Title>
+          <Title level={3} style={{ marginBottom: 16 }}>Seleccioná tus entradas</Title>
+          
+          {/* Mensaje de límite de 5 boletos */}
+          <Alert
+            message="Límite de compra: 5 boletos por evento"
+            description={
+              totalTickets > 0 ? (
+                <span>
+                  Ya seleccionaste <strong>{totalTickets}</strong> de 5 boletos.{' '}
+                  {totalTickets < 5 ? (
+                    <span style={{ color: '#52c41a' }}>Te quedan <strong>{5 - totalTickets}</strong> disponible{5 - totalTickets !== 1 ? 's' : ''}.</span>
+                  ) : (
+                    <span style={{ color: '#ff4d4f' }}>Has alcanzado el límite.</span>
+                  )}
+                </span>
+              ) : (
+                'Podés seleccionar hasta 5 boletos por evento.'
+              )
+            }
+            type={totalTickets >= 5 ? 'warning' : 'info'}
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
           
           {sections.length > 0 ? (
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -618,7 +657,10 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
                       <QuantitySelector 
                         value={sectionQuantities[String(section.id)] || 0}
                         onChange={(q) => handleQuantityChange(String(section.id), q)}
-                        max={Math.min(section.capacity || 10, 10)} // Máximo 10 por compra
+                        max={Math.min(
+                          section.capacity || 5, 
+                          5 - (totalTickets - (sectionQuantities[String(section.id)] || 0)) // Respetar límite global de 5
+                        )}
                         disabled={section.capacity === 0}
                       />
                     </Col>

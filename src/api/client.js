@@ -1,5 +1,6 @@
 // API Client basado en la documentación de endpoints
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vibratickets.online';
+// Usar proxy de Vite en desarrollo (vacío) o URL de producción
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 class ApiClient {
   constructor() {

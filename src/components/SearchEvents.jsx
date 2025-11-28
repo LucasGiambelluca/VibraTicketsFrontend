@@ -24,7 +24,6 @@ const SearchEvents = ({ onEventSelect, placeholder = "Buscar eventos..." }) => {
         setResults(response.events);
         setShowResults(true);
       } catch (err) {
-        console.error('Search error:', err);
         setResults([]);
       } finally {
         setLoading(false);
@@ -72,12 +71,13 @@ const SearchEvents = ({ onEventSelect, placeholder = "Buscar eventos..." }) => {
         className="search-input"
         style={{
           width: '100%',
-          padding: '12px 16px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
+          padding: '14px 18px',
+          border: '2px solid #000',
+          borderRadius: '4px',
           fontSize: '16px',
           outline: 'none',
-          transition: 'border-color 0.2s'
+          transition: 'all 0.2s ease',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}
         onFocus={() => query.length >= 2 && setShowResults(true)}
       />
@@ -85,25 +85,25 @@ const SearchEvents = ({ onEventSelect, placeholder = "Buscar eventos..." }) => {
       {showResults && (
         <div className="search-results" style={{
           position: 'absolute',
-          top: '100%',
+          top: 'calc(100% + 4px)',
           left: 0,
           right: 0,
           background: 'white',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
+          border: '2px solid #000',
+          borderRadius: '4px',
           maxHeight: '300px',
           overflowY: 'auto',
           zIndex: 1000,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
         }}>
           {loading && (
-            <div className="search-loading" style={{ padding: '12px 16px', color: '#666' }}>
+            <div className="search-loading" style={{ padding: '16px 18px', color: '#666' }}>
               Buscando...
             </div>
           )}
           
           {!loading && results.length === 0 && (
-            <div className="search-no-results" style={{ padding: '12px 16px', color: '#666' }}>
+            <div className="search-no-results" style={{ padding: '16px 18px', color: '#666' }}>
               No se encontraron eventos
             </div>
           )}
@@ -114,26 +114,31 @@ const SearchEvents = ({ onEventSelect, placeholder = "Buscar eventos..." }) => {
               className="search-result-item"
               onClick={() => handleEventSelect(event)}
               style={{
-                padding: '12px 16px',
+                padding: '16px 18px',
                 borderBottom: '1px solid #eee',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.15s ease'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#f9f9f9'}
               onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
             >
-              <div className="result-name" style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              <div className="result-name" style={{ 
+                fontWeight: '600', 
+                fontSize: '16px',
+                color: '#000',
+                marginBottom: '6px' 
+              }}>
                 {event.name}
               </div>
               <div className="result-details" style={{ fontSize: '14px', color: '#666' }}>
                 {event.venue_name && (
-                  <span style={{ marginRight: '12px' }}>
-                    📍 {event.venue_name} - {event.venue_city}
+                  <span style={{ marginRight: '16px' }}>
+                    {event.venue_name}, {event.venue_city}
                   </span>
                 )}
                 {event.next_show_date && (
                   <span>
-                    🕒 {new Date(event.next_show_date).toLocaleDateString('es-ES')}
+                    {new Date(event.next_show_date).toLocaleDateString('es-ES')}
                   </span>
                 )}
               </div>

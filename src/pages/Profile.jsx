@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, message, Space, Typography, Divider, Avatar, Row, Col, Tabs, Modal } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined, LockOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Button, message, Space, Typography, Divider, Avatar, Row, Col, Tabs, Modal, Alert, Tooltip, Badge } from 'antd';
+import { UserOutlined, MailOutlined, PhoneOutlined, LockOutlined, EditOutlined, SaveOutlined, IdcardOutlined, InfoCircleOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../services/apiService';
+import { validateDNI } from '../utils/validators';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -21,7 +22,8 @@ export default function Profile() {
       form.setFieldsValue({
         name: user.name,
         email: user.email,
-        phone: user.phone || ''
+        phone: user.phone || '',
+        dni: user.dni || ''
       });
     }
   }, [user, form]);
@@ -29,9 +31,20 @@ export default function Profile() {
   const handleUpdateProfile = async (values) => {
     setLoading(true);
     try {
+      // Validar DNI si fue proporcionado
+      if (values.dni) {
+        const dniValidation = validateDNI(values.dni);
+        if (!dniValidation.valid) {
+          message.error(dniValidation.error);
+          setLoading(false);
+          return;
+        }
+      }
+
       await usersApi.updateMe({
         name: values.name,
-        phone: values.phone
+        phone: values.phone,
+        dni: values.dni
       });
       
       await refreshUser();
@@ -51,19 +64,40 @@ export default function Profile() {
       return;
     }
 
+    console.log('=== CAMBIO DE CONTRASEÑA ===');
+    console.log('Valores del formulario:', { ...values, currentPassword: '***', newPassword: '***' });
+
     setLoading(true);
     try {
-      await usersApi.changePassword({
+      const payload = {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword
-      });
+      };
+      console.log('Enviando payload a /api/users/me/change-password');
+      
+      const response = await usersApi.changePassword(payload);
+      console.log('Respuesta del servidor:', response);
       
       message.success('Contraseña cambiada correctamente');
       setPasswordModalVisible(false);
       passwordForm.resetFields();
     } catch (error) {
-      console.error('Error cambiando contraseña:', error);
-      message.error(error.response?.data?.message || 'Error al cambiar la contraseña');
+      console.error('=== ERROR CAMBIANDO CONTRASEÑA ===');
+      console.error('Error completo:', error);
+      console.error('Error message:', error.message);
+      console.error('Error status:', error.status);
+      console.error('Error response:', error.response);
+      
+      let errorMsg = 'Error al cambiar la contraseña';
+      if (error.message?.includes('fetch') || error.message?.includes('Backend no disponible')) {
+        errorMsg = 'No se pudo conectar con el servidor. Verificá que el backend esté corriendo.';
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      message.error(errorMsg, 5);
     } finally {
       setLoading(false);
     }
@@ -134,6 +168,25 @@ export default function Profile() {
               {/* Tab: Información Personal */}
               <TabPane tab="Información Personal" key="1">
                 <div style={{ maxWidth: 600 }}>
+                  {/* Advertencia si no tiene DNI */}
+                  {!user?.dni && (
+                    <Alert
+                      message="DNI Requerido"
+                      description="Debés completar tu DNI para poder comprar boletos. Máximo 5 boletos por evento."
+                      type="warning"
+                      showIcon
+                      icon={<WarningOutlined />}
+                      style={{ marginBottom: 24 }}
+                      action={
+                        !editMode && (
+                          <Button size="small" type="primary" onClick={() => setEditMode(true)}>
+                            Completar DNI
+                          </Button>
+                        )
+                      }
+                    />
+                  )}
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <Title level={4} style={{ margin: 0 }}>Datos Personales</Title>
                     {!editMode && (
@@ -190,6 +243,59 @@ export default function Profile() {
                         prefix={<PhoneOutlined />} 
                         placeholder="+54 9 11 1234-5678"
                         size="large"
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      label={
+                        <span>
+                          DNI{' '}
+                          {!user?.dni && (
+                            <Badge 
+                              count="Requerido" 
+                              style={{ backgroundColor: '#ff4d4f' }}
+                            />
+                          )}
+                          {' '}
+                          <Tooltip title="Documento Nacional de Identidad - Requerido para validar compras (máximo 5 boletos por evento)">
+                            <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      name="dni"
+                      rules={[
+                        {
+                          validator: async (_, value) => {
+                            if (!value) return; // Permitir vacío para que puedan guardarlo después
+                            const validation = validateDNI(value);
+                            if (!validation.valid) {
+                              throw new Error(validation.error);
+                            }
+                          }
+                        }
+                      ]}
+                      extra={
+                        user?.dni ? (
+                          <span style={{ color: '#52c41a' }}>
+                            <CheckCircleOutlined /> DNI verificado - Podés comprar hasta 5 boletos por evento
+                          </span>
+                        ) : (
+                          <span style={{ color: '#ff4d4f' }}>
+                            <WarningOutlined /> Completá tu DNI para poder comprar boletos
+                          </span>
+                        )
+                      }
+                    >
+                      <Input 
+                        prefix={<IdcardOutlined />} 
+                        placeholder="12345678"
+                        maxLength={8}
+                        size="large"
+                        onChange={(e) => {
+                          // Solo permitir números
+                          const value = e.target.value.replace(/\D/g, '');
+                          form.setFieldsValue({ dni: value });
+                        }}
                       />
                     </Form.Item>
 

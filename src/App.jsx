@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout } from "antd";
+import { Layout, ConfigProvider } from "antd";
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { LoginModalProvider } from "./contexts/LoginModalContext";
@@ -18,6 +18,8 @@ import { healthApi } from "./services/apiService";
 import Home from "./pages/Home";
 import HomeSimple from "./pages/HomeSimple";
 import EventsCatalog from "./pages/EventsCatalog";
+import EventsTicketBahia from "./pages/EventsTicketBahia";
+import EventsHybrid from "./pages/EventsHybrid";
 import EventDetail from "./pages/EventDetail";
 import ShowDetail from "./pages/ShowDetail";
 import Queue from "./pages/Queue";
@@ -38,11 +40,16 @@ import AdminLogin from "./pages/AdminLogin";
 import CustomerLogin from "./pages/CustomerLogin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Soporte from "./pages/Soporte";
 import SoporteTickets from "./pages/SoporteTickets";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsersPanel from "./pages/admin/AdminUsersPanel";
 import ManageOrders from "./pages/admin/ManageOrders";
+
+import DiscountCodes from "./pages/admin/DiscountCodes";
+import FinancialReports from "./pages/admin/FinancialReports";
+import TestDiscount from "./pages/TestDiscount";
 import MyHolds from "./pages/MyHolds";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
@@ -105,6 +112,33 @@ export default function App() {
 
   // 3. Mostrar la app completa
   return (
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#667eea',
+          fontFamily: 'Inter, sans-serif',
+          borderRadius: 8,
+        },
+        components: {
+          Button: {
+            borderRadius: 8,
+            controlHeight: 40,
+            boxShadow: '0 2px 0 rgba(0, 0, 0, 0.04)',
+          },
+          Card: {
+            borderRadiusLG: 16,
+          },
+          Input: {
+            controlHeight: 42,
+            borderRadius: 8,
+          },
+          Select: {
+            controlHeight: 42,
+            borderRadius: 8,
+          }
+        }
+      }}
+    >
     <ErrorBoundary>
       <AuthProvider>
         <LoginModalProvider>
@@ -117,14 +151,16 @@ export default function App() {
           }}>
             <HeaderNav />
         <Content style={{ 
-          padding: '0', 
+          padding: '80px 0 0 0', 
           flex: 1,
           background: "transparent"
         }}>
           <Routes>
             {/* Rutas públicas */}
             <Route path="/" element={<Home />} />
-            <Route path="/events" element={<EventsCatalog />} />
+            <Route path="/events" element={<EventsHybrid />} />
+            <Route path="/events-original" element={<EventsCatalog />} />
+            <Route path="/events-tb" element={<EventsTicketBahia />} />
             <Route path="/events/:eventId" element={<EventDetail />} />
             <Route path="/shows/:showId" element={<ShowDetail />} />
             <Route path="/help" element={<Help />} />
@@ -137,7 +173,11 @@ export default function App() {
             <Route path="/customerlogin" element={<CustomerLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/soporte" element={<Soporte />} />
+            
+            {/* Ruta de prueba para debugging */}
+            <Route path="/test-discount" element={<TestDiscount />} />
             
             {/* Rutas de respuesta de Mercado Pago - Públicas pero verifican estado */}
             <Route path="/payment/success" element={<PaymentSuccess />} />
@@ -167,6 +207,12 @@ export default function App() {
                 <ProtectedRoute>
                   <Checkout />
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/checkout/success" 
+              element={
+                <PaymentSuccess />
               } 
             />
             <Route 
@@ -267,6 +313,22 @@ export default function App() {
                 </AdminRoute>
               } 
             />
+            <Route 
+              path="/admin/discount-codes" 
+              element={
+                <AdminRoute>
+                  <DiscountCodes />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/reports" 
+              element={
+                <AdminRoute>
+                  <FinancialReports />
+                </AdminRoute>
+              } 
+            />
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
@@ -279,7 +341,8 @@ export default function App() {
       </Layout>
         </RegisterModalProvider>
       </LoginModalProvider>
-    </AuthProvider>
+      </AuthProvider>
     </ErrorBoundary>
+    </ConfigProvider>
   );
 }

@@ -1,0 +1,615 @@
+// ============================================
+// SISTEMA DE DESCUENTOS - ESTILOS
+// ============================================
+
+// Variables de color
+$primary-color: #667eea;
+$primary-dark: #764ba2;
+$success-color: #52c41a;
+$error-color: #ff4d4f;
+$warning-color: #faad14;
+$info-color: #1890ff;
+
+// Gradiente principal
+@mixin primary-gradient {
+  background: linear-gradient(135deg, $primary-color 0%, $primary-dark 100%);
+}
+
+// ============================================
+// Componente de Descuento en Checkout
+// ============================================
+
+.discount-code-wrapper {
+  margin-bottom: 24px;
+
+  .discount-input-group {
+    display: flex;
+    gap: 8px;
+
+    input {
+      flex: 1;
+      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+
+      &:focus {
+        border-color: $primary-color;
+        box-shadow: 0 0 0 2px rgba($primary-color, 0.1);
+      }
+    }
+
+    button {
+      min-width: 100px;
+    }
+  }
+
+  .discount-tip {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #666;
+
+    strong {
+      color: $primary-color;
+      cursor: pointer;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Descuento aplicado
+.discount-applied {
+  background: linear-gradient(135deg, #f6ffed 0%, #ffffff 100%);
+  border: 1px solid #b7eb8f;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  animation: discountApplied 0.3s ease-out;
+
+  .ant-tag-success {
+    font-size: 14px;
+    padding: 4px 12px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+    border: none;
+  }
+
+  .discount-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .discount-details {
+      flex: 1;
+
+      .discount-description {
+        color: #595959;
+        margin-top: 4px;
+      }
+    }
+
+    .discount-amount {
+      text-align: right;
+      
+      .discount-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: $success-color;
+      }
+
+      .discount-saved {
+        font-size: 12px;
+        color: #8c8c8c;
+      }
+    }
+  }
+
+  .remove-discount-btn {
+    color: $error-color;
+    font-size: 14px;
+    padding: 0;
+    height: auto;
+    
+    &:hover {
+      color: darken($error-color, 10%);
+      text-decoration: underline;
+    }
+  }
+}
+
+// ============================================
+// Panel Administrativo
+// ============================================
+
+.discount-codes-admin {
+  padding: 24px;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    
+    h1, h2 {
+      margin: 0;
+      
+      .anticon {
+        margin-right: 12px;
+        color: $primary-color;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+
+      button {
+        @include primary-gradient;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+        }
+      }
+    }
+  }
+
+  // Tarjetas de estadísticas
+  .statistics-cards {
+    margin-bottom: 32px;
+
+    .ant-card {
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      }
+
+      .ant-statistic-title {
+        color: #8c8c8c;
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      .ant-statistic-content {
+        .ant-statistic-content-value {
+          font-size: 28px;
+          font-weight: bold;
+        }
+      }
+    }
+  }
+
+  // Tabla de códigos
+  .codes-table {
+    .ant-table {
+      border-radius: 12px;
+      overflow: hidden;
+
+      .ant-table-thead {
+        background: #fafafa;
+      }
+
+      .expired-code {
+        opacity: 0.6;
+        text-decoration: line-through;
+      }
+
+      .code-tag {
+        font-size: 14px;
+        padding: 4px 12px;
+        font-weight: 600;
+      }
+
+      .usage-progress {
+        display: inline-block;
+        min-width: 100px;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 4px;
+
+        button {
+          padding: 4px 8px;
+        }
+      }
+    }
+  }
+}
+
+// Formulario de creación/edición
+.discount-code-form {
+  .form-section {
+    margin-bottom: 32px;
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #262626;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      
+      .anticon {
+        margin-right: 8px;
+        color: $primary-color;
+      }
+    }
+  }
+
+  .code-examples {
+    background: linear-gradient(135deg, rgba($primary-color, 0.05), rgba($primary-dark, 0.05));
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 24px;
+
+    h5 {
+      color: $primary-color;
+      margin-bottom: 12px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+
+      li {
+        margin-bottom: 8px;
+        color: #595959;
+
+        strong {
+          color: #262626;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Historial de Descuentos del Usuario
+// ============================================
+
+.discount-history {
+  padding: 24px;
+
+  .history-header {
+    margin-bottom: 32px;
+
+    h2 {
+      margin-bottom: 8px;
+      
+      .anticon {
+        margin-right: 12px;
+        color: $primary-color;
+      }
+    }
+
+    .header-subtitle {
+      color: #8c8c8c;
+      font-size: 16px;
+    }
+  }
+
+  // Estadísticas de ahorro
+  .savings-statistics {
+    margin-bottom: 32px;
+
+    .ant-card {
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fff, #fafafa);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+    }
+  }
+
+  // Filtros
+  .history-filters {
+    background: #fafafa;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+
+    .filter-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+  }
+
+  // Tabla de historial
+  .history-table {
+    .discount-code-cell {
+      .ant-tag {
+        font-size: 13px;
+        padding: 2px 8px;
+        font-weight: 600;
+      }
+    }
+
+    .discount-amount-cell {
+      font-size: 16px;
+      font-weight: bold;
+      color: $success-color;
+    }
+
+    .order-link {
+      color: $primary-color;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  // Timeline para móviles
+  .mobile-timeline {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: block;
+      margin-top: 24px;
+
+      .ant-timeline-item {
+        .timeline-card {
+          background: #fff;
+          border-radius: 8px;
+          padding: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+
+          .event-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+
+          .discount-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f0f0;
+
+            .discount-amount {
+              font-weight: bold;
+              color: $success-color;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Tips de ahorro
+  .savings-tips {
+    margin-top: 32px;
+    background: linear-gradient(135deg, rgba($primary-color, 0.05), rgba($primary-dark, 0.05));
+    border-radius: 12px;
+    padding: 20px;
+
+    h5 {
+      color: $primary-color;
+      margin-bottom: 12px;
+      font-size: 18px;
+      
+      .emoji {
+        margin-right: 8px;
+      }
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 24px;
+
+      li {
+        margin-bottom: 8px;
+        color: #595959;
+        line-height: 1.6;
+      }
+    }
+  }
+}
+
+// ============================================
+// Animaciones
+// ============================================
+
+@keyframes discountApplied {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($success-color, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba($success-color, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($success-color, 0);
+  }
+}
+
+.discount-animation {
+  animation: discountApplied 0.3s ease-out;
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+// ============================================
+// Mobile Responsive
+// ============================================
+
+@media (max-width: 768px) {
+  .discount-codes-admin {
+    padding: 16px;
+
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+
+      h1, h2 {
+        font-size: 20px;
+      }
+
+      .header-actions {
+        justify-content: stretch;
+
+        button {
+          flex: 1;
+        }
+      }
+    }
+
+    .statistics-cards {
+      .ant-col {
+        margin-bottom: 16px;
+      }
+    }
+  }
+
+  .discount-applied {
+    .discount-info {
+      flex-direction: column;
+      gap: 12px;
+
+      .discount-amount {
+        text-align: left;
+        padding-top: 12px;
+        border-top: 1px solid #f0f0f0;
+      }
+    }
+  }
+
+  .discount-code-form {
+    .ant-form-item {
+      margin-bottom: 16px;
+    }
+
+    .code-examples {
+      ul {
+        padding-left: 16px;
+        font-size: 14px;
+      }
+    }
+  }
+
+  .order-summary {
+    .ant-list-item {
+      padding: 8px 0;
+      
+      .ant-list-item-meta-title {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .discount-code-wrapper {
+    .discount-input-group {
+      flex-direction: column;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .discount-history {
+    padding: 16px;
+
+    .history-table {
+      .ant-table {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+// ============================================
+// Dark Mode Support
+// ============================================
+
+@media (prefers-color-scheme: dark) {
+  .discount-applied {
+    background: linear-gradient(135deg, rgba($success-color, 0.1), rgba($success-color, 0.05));
+    border-color: rgba($success-color, 0.3);
+
+    .discount-description {
+      color: #bfbfbf;
+    }
+  }
+
+  .discount-codes-admin {
+    .ant-card {
+      background: #141414;
+      border-color: #303030;
+    }
+
+    .codes-table {
+      .ant-table {
+        background: #141414;
+
+        .ant-table-thead {
+          background: #1f1f1f;
+        }
+      }
+    }
+  }
+
+  .discount-code-form {
+    .code-examples {
+      background: rgba($primary-color, 0.1);
+      
+      ul li {
+        color: #bfbfbf;
+      }
+    }
+  }
+}
+
+// ============================================
+// Utilidades
+// ============================================
+
+.text-success {
+  color: $success-color;
+}
+
+.text-error {
+  color: $error-color;
+}
+
+.text-warning {
+  color: $warning-color;
+}
+
+.text-primary {
+  color: $primary-color;
+}
+
+.bg-gradient-primary {
+  @include primary-gradient;
+}

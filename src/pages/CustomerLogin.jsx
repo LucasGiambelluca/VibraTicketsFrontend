@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Typography, Form, Input, Button, Space, message, Alert, Divider } from 'antd';
+import { Card, Typography, Form, Input, Button, Space, message, Alert, Divider, Checkbox } from 'antd';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import logo from '../assets/VibraTicketLogo2.png';

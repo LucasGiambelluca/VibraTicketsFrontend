@@ -186,11 +186,11 @@ export default function SeatSelection() {
       };
 
       const holdResponse = await holdsApi.createHold(holdData);
-      // 🔧 FIX: Normalizar holdId (backend puede devolver 'id' o 'holdId')
+      // FIX: Normalizar holdId (backend puede devolver 'id' o 'holdId')
       const holdId = holdResponse.holdId || holdResponse.id;
       
       if (!holdId) {
-        console.error('❌ ERROR: La respuesta del hold no tiene id:', holdResponse);
+        console.error('ERROR: La respuesta del hold no tiene id:', holdResponse);
         throw new Error('El backend no devolvió un ID de reserva válido');
       }
       
@@ -209,7 +209,7 @@ export default function SeatSelection() {
       });
     } catch (error) {
       message.destroy();
-      console.error('❌ Error al crear hold:', error);
+      console.error('Error al crear hold:', error);
       message.error(error.message || 'Error al crear la reserva. Intentá nuevamente.');
       setLoading(false);
     } finally {
@@ -234,200 +234,205 @@ export default function SeatSelection() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="fade-in" style={{ padding: '40px 24px', maxWidth: 1200, margin: '0 auto' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <div>
-          <Title level={2}>
-            {isGeneralAdmission ? 'Selección de Entradas' : 'Selección de Asientos'}
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Title level={2} style={{ margin: 0, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+            {isGeneralAdmission ? 'Seleccioná tus Entradas' : 'Elegí tus Asientos'}
           </Title>
-          <Text type="secondary">
-            {event?.name} - {show?.starts_at ? new Date(show.starts_at).toLocaleDateString('es-ES') : ''}
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem' }}>
+            {event?.name} • {show?.starts_at ? new Date(show.starts_at).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
           </Text>
         </div>
 
-        <Row gutter={[24, 24]}>
+        <Row gutter={[32, 32]}>
           <Col xs={24} lg={16}>
-            <Card 
-              title={
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 600 }}>{section.name}</div>
-                  <div style={{ fontSize: 14, fontWeight: 400, color: '#666', marginTop: 4 }}>
-                    {isGeneralAdmission ? '🎫 Entrada General' : '🪑 Asientos Numerados'}
-                  </div>
-                </div>
-              }
-            >
+            <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+              <div style={{ marginBottom: 24, borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: 16 }}>
+                <Title level={3} style={{ margin: 0, fontSize: '1.5rem' }}>{section.name}</Title>
+                <Text type="secondary">
+                  {isGeneralAdmission ? 'Entrada General' : 'Asientos Numerados'}
+                </Text>
+              </div>
+
               {isGeneralAdmission ? (
-                // ENTRADA GENERAL - Solo selector de cantidad
-                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                  <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: 400, margin: '0 auto' }}>
-                    <div>
-                      <Text style={{ fontSize: 16, display: 'block', marginBottom: 8 }}>Precio por entrada:</Text>
-                      <Text strong style={{ fontSize: 32, color: '#667eea' }}>
-                        ${price.toLocaleString()}
+                // ENTRADA GENERAL - Selector Moderno
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0' }}>
+                  <Text style={{ fontSize: 16, color: '#666', marginBottom: 16 }}>Cantidad de entradas</Text>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 32 }}>
+                    <Button 
+                      shape="circle"
+                      size="large"
+                      onClick={() => handleQuantityChange(generalQuantity - 1)}
+                      disabled={generalQuantity <= 1}
+                      style={{ width: 50, height: 50, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    >
+                      <span style={{ fontSize: 24, lineHeight: 1 }}>-</span>
+                    </Button>
+                    
+                    <div style={{ textAlign: 'center', minWidth: 60 }}>
+                      <Text style={{ fontSize: 48, fontWeight: 'bold', color: '#667eea', lineHeight: 1 }}>
+                        {generalQuantity}
                       </Text>
                     </div>
-                    
-                    <div>
-                      <Text style={{ fontSize: 16, display: 'block', marginBottom: 12 }}>Cantidad de entradas:</Text>
-                      <InputNumber
-                        min={1}
-                        max={Math.min(section.available_seats, 10)}
-                        value={generalQuantity}
-                        onChange={handleQuantityChange}
-                        size="large"
-                        style={{ width: 120, fontSize: 24 }}
-                      />
-                    </div>
-                    
-                    <div style={{ background: '#f0f5ff', padding: 16, borderRadius: 8 }}>
-                      <Text type="secondary">
-                        Disponibles: <strong>{section.available_seats}</strong> entradas
-                      </Text>
-                    </div>
-                  </Space>
+
+                    <Button 
+                      shape="circle"
+                      size="large"
+                      onClick={() => handleQuantityChange(generalQuantity + 1)}
+                      disabled={generalQuantity >= Math.min(section.available_seats, 10)}
+                      style={{ width: 50, height: 50, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: '#667eea', color: 'white' }}
+                    >
+                      <span style={{ fontSize: 24, lineHeight: 1 }}>+</span>
+                    </Button>
+                  </div>
+
+                  <div style={{ 
+                    background: 'rgba(102, 126, 234, 0.08)', 
+                    padding: '16px 32px', 
+                    borderRadius: '16px',
+                    textAlign: 'center'
+                  }}>
+                    <Text style={{ display: 'block', fontSize: 14, color: '#666', marginBottom: 4 }}>Precio por unidad</Text>
+                    <Text strong style={{ fontSize: 24, color: '#333' }}>
+                      ${price.toLocaleString()}
+                    </Text>
+                  </div>
+                  
+                  <div style={{ marginTop: 24 }}>
+                    <Tag color={section.available_seats > 20 ? 'success' : 'warning'} style={{ padding: '4px 12px', borderRadius: 12 }}>
+                      {section.available_seats} disponibles
+                    </Tag>
+                  </div>
                 </div>
               ) : (
-                // ASIENTOS NUMERADOS - Mapa de butacas
+                // ASIENTOS NUMERADOS - Mapa de butacas mejorado
                 <div>
-                  <div style={{ marginBottom: 16, padding: 12, background: '#f0f5ff', borderRadius: 8 }}>
-                    <Text>Seleccioná tus asientos en el mapa. Máximo 10 asientos por compra.</Text>
+                  <div style={{ marginBottom: 24, textAlign: 'center' }}>
+                    <div style={{ 
+                      background: '#e0e0e0', 
+                      height: 8, 
+                      width: '80%', 
+                      margin: '0 auto 8px', 
+                      borderRadius: '4px 4px 0 0',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>ESCENARIO</Text>
                   </div>
+
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(10, 1fr)', 
-                    gap: 8,
-                    maxWidth: 600,
-                    margin: '0 auto'
+                    gap: 10,
+                    maxWidth: 500,
+                    margin: '0 auto',
+                    padding: 20
                   }}>
-                    {/* TODO: Cargar asientos reales del backend */}
                     {Array.from({ length: section.capacity || 50 }, (_, i) => {
                       const seat = {
                         id: `${section.name}-${i + 1}`,
                         row: Math.floor(i / 10) + 1,
                         number: (i % 10) + 1,
-                        available: i < section.available_seats // Simplificado
+                        available: i < section.available_seats
                       };
                       const isSelected = selectedSeats.find(s => s.id === seat.id);
+                      
                       return (
-                        <Button
+                        <div
                           key={seat.id}
-                          size="small"
-                          type={isSelected ? 'primary' : 'default'}
-                          disabled={!seat.available}
                           onClick={() => handleSeatClick(seat)}
                           style={{
-                            minWidth: 40,
-                            height: 32,
-                            fontSize: 11,
-                            backgroundColor: !seat.available ? '#f5f5f5' : 
-                                           isSelected ? '#667eea' : '#fff'
+                            aspectRatio: '1',
+                            borderRadius: '8px',
+                            background: !seat.available ? '#e0e0e0' : isSelected ? '#667eea' : '#fff',
+                            border: isSelected ? 'none' : '1px solid #d9d9d9',
+                            cursor: seat.available ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            color: isSelected ? '#fff' : '#666',
+                            transition: 'all 0.2s',
+                            boxShadow: isSelected ? '0 4px 10px rgba(102, 126, 234, 0.4)' : 'none',
+                            transform: isSelected ? 'scale(1.1)' : 'scale(1)'
                           }}
                         >
                           {i + 1}
-                        </Button>
+                        </div>
                       );
                     })}
                   </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 32 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 16, height: 16, background: '#fff', border: '1px solid #d9d9d9', borderRadius: 4 }} />
+                      <Text style={{ fontSize: 12 }}>Disponible</Text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 16, height: 16, background: '#667eea', borderRadius: 4 }} />
+                      <Text style={{ fontSize: 12 }}>Seleccionado</Text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 16, height: 16, background: '#e0e0e0', borderRadius: 4 }} />
+                      <Text style={{ fontSize: 12 }}>Ocupado</Text>
+                    </div>
+                  </div>
                 </div>
               )}
-            </Card>
+            </div>
           </Col>
 
           <Col xs={24} lg={8}>
-            <Card title="Resumen de compra" style={{ position: 'sticky', top: 24 }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                {isGeneralAdmission ? (
-                  <div>
-                    <Text strong>Entradas seleccionadas:</Text>
-                    <div style={{ marginTop: 8 }}>
-                      <Tag color="blue" style={{ fontSize: 16, padding: '4px 12px' }}>
-                        {generalQuantity} {generalQuantity === 1 ? 'entrada' : 'entradas'}
-                      </Tag>
-                    </div>
+            <div className="glass-card" style={{ padding: '24px', borderRadius: '24px', position: 'sticky', top: 24 }}>
+              <Title level={4} style={{ marginTop: 0 }}>Resumen</Title>
+              
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <div style={{ background: 'rgba(255,255,255,0.5)', padding: 16, borderRadius: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text type="secondary">Entradas ({quantity})</Text>
+                    <Text strong>${subtotal.toLocaleString()}</Text>
                   </div>
-                ) : (
-                  <div>
-                    <Text strong>Asientos seleccionados:</Text>
-                    <div style={{ marginTop: 8 }}>
-                      {selectedSeats.length === 0 ? (
-                        <Text type="secondary">Ninguno</Text>
-                      ) : (
-                        selectedSeats.map(seat => (
-                          <Tag key={seat.id} color="blue" style={{ margin: 2 }}>
-                            {seat.id}
-                          </Tag>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {(isGeneralAdmission || selectedSeats.length > 0) && (
-                  <>
-                    <div>
-                      <Text>Cantidad: {quantity}</Text>
-                      <br />
-                      <div style={{ marginTop: 8 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text>Subtotal:</Text>
-                          <Text>${subtotal.toLocaleString()}</Text>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <Text type="secondary">Cargo por servicios (15%):</Text>
-                          <Text type="secondary">${serviceCharge.toLocaleString()}</Text>
-                        </div>
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          padding: '8px 0',
-                          borderTop: '1px solid #f0f0f0',
-                          fontWeight: 'bold'
-                        }}>
-                          <Text strong style={{ fontSize: 16 }}>Total:</Text>
-                          <Text strong style={{ fontSize: 16, color: '#52c41a' }}>
-                            ${total.toLocaleString()}
-                          </Text>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button 
-                      type="primary" 
-                      size="large" 
-                      block 
-                      loading={loading}
-                      onClick={handleContinueClick}
-                      style={{
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontWeight: 600,
-                        boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
-                        height: 48
-                      }}
-                    >
-                      {isAuthenticated ? 'Continuar con la compra' : 'Continuar como invitado'}
-                    </Button>
-                  </>
-                )}
-
-                <div style={{ marginTop: 16, fontSize: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{ width: 16, height: 16, backgroundColor: '#1890ff', borderRadius: 2 }} />
-                    <Text>Seleccionado</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{ width: 16, height: 16, backgroundColor: '#fff', border: '1px solid #d9d9d9', borderRadius: 2 }} />
-                    <Text>Disponible</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 16, height: 16, backgroundColor: '#f5f5f5', borderRadius: 2 }} />
-                    <Text>Ocupado</Text>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">Cargo servicio</Text>
+                    <Text type="secondary">${serviceCharge.toLocaleString()}</Text>
                   </div>
                 </div>
+
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-end',
+                  paddingTop: 8
+                }}>
+                  <Text style={{ fontSize: 16 }}>Total</Text>
+                  <Text strong style={{ fontSize: 24, color: '#667eea' }}>
+                    ${total.toLocaleString()}
+                  </Text>
+                </div>
+
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  block 
+                  loading={loading}
+                  onClick={handleContinueClick}
+                  style={{
+                    height: 56,
+                    borderRadius: 16,
+                    fontSize: 18,
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    border: 'none',
+                    boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4)',
+                    marginTop: 16
+                  }}
+                >
+                  Continuar
+                </Button>
               </Space>
-            </Card>
+            </div>
           </Col>
         </Row>
       </Space>
@@ -439,6 +444,8 @@ export default function SeatSelection() {
         onCancel={() => setShowGuestForm(false)}
         footer={null}
         width={600}
+        centered
+        className="glass-modal"
       >
         <GuestCheckoutForm
           onSubmit={handleGuestSubmit}

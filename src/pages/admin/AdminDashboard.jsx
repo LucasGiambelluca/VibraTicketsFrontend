@@ -16,7 +16,9 @@ import {
   EnvironmentOutlined,
   PictureOutlined,
   BarChartOutlined,
-  ShoppingCartOutlined
+  ShoppingCartOutlined,
+  TagsOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import CreateEvent from '../../components/CreateEvent';
 import CreateVenue from '../../components/CreateVenue';
@@ -25,9 +27,10 @@ import MercadoPagoConfig from '../../components/MercadoPagoConfig';
 import EventImageUpload from '../../components/EventImageUpload';
 import EventStyleEditor from '../../components/EventStyleEditor';
 import AdminBanners from './AdminBanners';
-import ReportsPanel from './ReportsPanel';
+import FinancialReports from './FinancialReports';
 import AdminUsersPanel from './AdminUsersPanel';
 import ManageOrders from './ManageOrders';
+import DiscountCodes from './DiscountCodes';
 import { getImageUrl } from '../../utils/imageUtils';
 import { useEvents } from '../../hooks/useEvents';
 import { showsApi, eventsApi, eventStylesApi } from '../../services/apiService';
@@ -44,18 +47,20 @@ const { Sider, Content, Header } = Layout;
 const { Option } = Select;
 
 export default function AdminDashboard() {
-  const [selectedMenu, setSelectedMenu] = useState('dashboard');
+  const [selectedMenu, setSelectedMenu] = useState('events');
   const [collapsed, setCollapsed] = useState(false);
   
   // Hooks
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  
+  // Shared Hooks for children
+  const venuesHook = useVenues({ limit: 100, sortBy: 'name', sortOrder: 'ASC' });
+  const { isLoaded: mapsLoaded } = useGoogleMaps();
 
   // Debug: Mostrar rol del usuario
   useEffect(() => {
     }, [user]);
-
-  const dashboardEvents = useEvents({ limit: 5 });
 
   const handleLogout = () => {
     logout();
@@ -64,11 +69,6 @@ export default function AdminDashboard() {
   };
 
   const menuItems = [
-    {
-      key: 'dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Dashboard',
-    },
     {
       key: 'events',
       icon: <CalendarOutlined />,
@@ -105,14 +105,14 @@ export default function AdminDashboard() {
       label: 'Órdenes',
     },
     {
+      key: 'discount-codes',
+      icon: <TagsOutlined />,
+      label: 'Códigos de Descuento',
+    },
+    {
       key: 'health',
       icon: <HeartOutlined />,
       label: 'Estado del Sistema',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Configuración',
     },
     {
       key: 'mercadopago',
@@ -123,30 +123,28 @@ export default function AdminDashboard() {
 
   const renderContent = () => {
     switch (selectedMenu) {
-      case 'dashboard':
-        return <DashboardContent eventsData={dashboardEvents} />;
       case 'events':
         return <EventsAdmin />;
       case 'shows':
-        return <ShowsAdmin />;
+        return <ShowsAdmin venuesHook={venuesHook} mapsLoaded={mapsLoaded} />;
       case 'venues':
         return <VenuesAdmin />;
       case 'banners':
         return <AdminBanners />;
       case 'reports':
-        return <ReportsPanel />;
+        return <FinancialReports />;
       case 'users':
         return <AdminUsersPanel />;
       case 'orders':
         return <ManageOrders />;
+      case 'discount-codes':
+        return <DiscountCodes />;
       case 'health':
         return <HealthContent />;
-      case 'settings':
-        return <SettingsAdmin />;
       case 'mercadopago':
         return <MercadoPagoConfig />;
       default:
-        return <DashboardContent eventsData={dashboardEvents} />;
+        return <EventsAdmin />;
     }
   };
 
@@ -238,93 +236,7 @@ export default function AdminDashboard() {
   );
 }
 
-// Dashboard Content
-function DashboardContent({ eventsData }) {
-  const { events, loading: eventsLoading } = eventsData;
-  
-  return (
-    <div>
-      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Eventos"
-              value={events.length}
-              valueStyle={{ color: '#3f8600' }}
-              prefix={<CalendarOutlined />}
-              loading={eventsLoading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tickets Vendidos"
-              value={1128}
-              valueStyle={{ color: '#cf1322' }}
-              prefix={<TeamOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Ingresos"
-              value={2840000}
-              precision={0}
-              valueStyle={{ color: '#1890ff' }}
-              prefix="$"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Usuarios Activos"
-              value={93}
-              suffix="%"
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-      
-      <Card title="Eventos Recientes" loading={eventsLoading}>
-        {events.length > 0 ? (
-          <div>
-            {events.slice(0, 3).map(event => (
-              <div key={event.id} style={{ 
-                padding: '12px 0', 
-                borderBottom: '1px solid #f0f0f0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <Text strong>{event.name}</Text>
-                  <br />
-                  <Text type="secondary">
-                    {event.venue_name ? `${event.venue_name} - ${event.venue_city}` : event.venue}
-                  </Text>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Text type="secondary">
-                    {event.next_show_date ? 
-                      format(new Date(event.next_show_date), 'dd MMM yyyy', { locale: es }) : 
-                      'Sin fecha'
-                    }
-                  </Text>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Text type="secondary">No hay eventos disponibles</Text>
-        )}
-      </Card>
-    </div>
-  );
-}
+
 
 // Events Admin
 function EventsAdmin() {
@@ -1396,7 +1308,7 @@ function EventsAdmin() {
 }
 
 // Shows Admin
-function ShowsAdmin() {
+function ShowsAdmin({ venuesHook, mapsLoaded }) {
   const [shows, setShows] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1423,15 +1335,8 @@ function ShowsAdmin() {
   const [selectedSection, setSelectedSection] = useState(null);
   const [editSectionForm] = Form.useForm();
   
-  // Cargar venues para el selector
-  const { venues, loading: venuesLoading, refetch: refetchVenues } = useVenues({ 
-    limit: 100, 
-    sortBy: 'name', 
-    sortOrder: 'ASC' 
-  });
-
-  // Hook de Google Maps
-  const { isLoaded: mapsLoaded } = useGoogleMaps();
+  // Cargar venues para el selector (desde props)
+  const { venues, loading: venuesLoading, refetch: refetchVenues } = venuesHook;
 
   // Debug: Log venues cuando cambien
   useEffect(() => {
@@ -1958,77 +1863,113 @@ function ShowsAdmin() {
   ];
   
   return (
-    <Card>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Title level={4}>Gestión de Shows</Title>
+    <div className="fade-in">
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <Title level={2} style={{ margin: 0, color: '#fff' }}>
+            <TeamOutlined style={{ marginRight: 12, color: '#667eea' }} />
+            Gestión de Shows
+          </Title>
+          <Text style={{ color: 'rgba(255,255,255,0.7)' }}>Administra las funciones y fechas de tus eventos</Text>
+        </div>
         <Space>
           <Button 
             icon={<PlusOutlined />} 
             type="primary"
+            size="large"
             onClick={() => message.info('Crear shows desde la sección de Eventos')}
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+            }}
           >
             Nuevo Show
           </Button>
-          <Button onClick={loadAllShows}>Refrescar</Button>
+          <Button 
+            icon={<ReloadOutlined />}
+            size="large"
+            onClick={loadAllShows}
+            className="glass-button"
+          >
+            Refrescar
+          </Button>
         </Space>
       </div>
       
       {error && (
         <div style={{ 
-          marginBottom: 16,
-          padding: '12px',
-          background: '#fff2f0',
-          border: '1px solid #ffccc7',
-          borderRadius: '6px'
+          marginBottom: 24,
+          padding: '16px',
+          background: 'rgba(255, 77, 79, 0.1)',
+          border: '1px solid rgba(255, 77, 79, 0.2)',
+          borderRadius: '12px',
+          backdropFilter: 'blur(10px)'
         }}>
           <Text type="danger">Error: {error}</Text>
         </div>
       )}
       
-      <Table 
-        rowKey="id" 
-        columns={columns} 
-        dataSource={shows}
-        loading={loading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Total ${total} shows`
-        }}
-      />
+      <Card className="glass-card" bordered={false} style={{ borderRadius: 16 }}>
+        <Table 
+          rowKey="id" 
+          columns={columns} 
+          dataSource={shows}
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {total} shows</span>,
+            className: 'glass-pagination'
+          }}
+          className="glass-table"
+        />
+      </Card>
 
       {/* Modal Asignar Secciones */}
       <Modal
-        title={selectedShow ? `Asignar Secciones • ${selectedShow.event_name}` : 'Asignar Secciones'}
+        title={<span style={{ fontSize: 20 }}>Asignar Secciones • {selectedShow ? selectedShow.event_name : ''}</span>}
         open={assignOpen}
         onCancel={() => setAssignOpen(false)}
         onOk={submitAssignSections}
         okText="Guardar"
         confirmLoading={assignLoading}
         width={720}
+        className="glass-modal"
       >
         {selectedShow && (
           <>
             <div style={{ 
-              background: '#f0f5ff', 
-              padding: 12, 
-              borderRadius: 8, 
-              marginBottom: 16,
-              border: '1px solid #d6e4ff'
+              background: 'rgba(102, 126, 234, 0.1)', 
+              padding: 16, 
+              borderRadius: 12, 
+              marginBottom: 24,
+              border: '1px solid rgba(102, 126, 234, 0.2)'
             }}>
-              <Text style={{ fontSize: 13 }}>
-                <strong>Show:</strong> {selectedShow.event_name}
-                <br />
-                <strong>Fecha:</strong> {selectedShow.startsAt ? format(new Date(selectedShow.startsAt), "dd 'de' MMMM 'de' yyyy HH:mm", { locale: es }) : 'N/A'}
-                <br />
-                <strong>Venue:</strong> {selectedShow.venue_name}
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <Text type="secondary">Show</Text>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>{selectedShow.event_name}</div>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Fecha</Text>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>
+                    {selectedShow.startsAt ? format(new Date(selectedShow.startsAt), "dd MMM yyyy HH:mm", { locale: es }) : 'N/A'}
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <Text type="secondary">Venue</Text>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>{selectedShow.venue_name}</div>
+                </Col>
                 {(selectedShow.venue_capacity || selectedShow.max_capacity) && (
-                  <>
-                    <br />
-                    <strong>Capacidad máxima del venue:</strong> {(selectedShow.venue_capacity || selectedShow.max_capacity).toLocaleString()} personas
-                  </>
+                  <Col span={12}>
+                    <Text type="secondary">Capacidad Venue</Text>
+                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                      {(selectedShow.venue_capacity || selectedShow.max_capacity).toLocaleString()} personas
+                    </div>
+                  </Col>
                 )}
-              </Text>
+              </Row>
             </div>
 
             {/* Indicador de capacidad */}
@@ -2040,28 +1981,19 @@ function ShowsAdmin() {
                 const percentage = venueCapacity > 0 ? (totalCapacity / venueCapacity) * 100 : 0;
                 const isOverCapacity = venueCapacity > 0 && totalCapacity > venueCapacity;
 
-                // Indicador visual basado en isOverCapacity (no se actualiza estado acá)
-
                 return totalCapacity > 0 ? (
-                  <div style={{ 
-                    background: isOverCapacity ? '#fff2e8' : '#f6ffed', 
-                    padding: 12, 
-                    borderRadius: 8, 
-                    marginBottom: 16,
-                    border: `1px solid ${isOverCapacity ? '#ffbb96' : '#b7eb8f'}`
-                  }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong style={{ color: isOverCapacity ? '#d4380d' : '#52c41a' }}>
-                        Capacidad total: {totalCapacity.toLocaleString()} / {venueCapacity.toLocaleString()} 
-                        ({percentage.toFixed(1)}%)
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text>Capacidad utilizada</Text>
+                      <Text strong style={{ color: isOverCapacity ? '#ff4d4f' : '#52c41a' }}>
+                        {totalCapacity.toLocaleString()} / {venueCapacity.toLocaleString()} ({percentage.toFixed(1)}%)
                       </Text>
                     </div>
                     <div style={{ 
-                      background: '#fff', 
-                      height: 20, 
-                      borderRadius: 10, 
-                      overflow: 'hidden',
-                      border: '1px solid #d9d9d9'
+                      background: 'rgba(0,0,0,0.05)', 
+                      height: 8, 
+                      borderRadius: 4, 
+                      overflow: 'hidden'
                     }}>
                       <div style={{ 
                         width: `${Math.min(percentage, 100)}%`, 
@@ -2069,12 +2001,12 @@ function ShowsAdmin() {
                         background: isOverCapacity 
                           ? 'linear-gradient(90deg, #ff4d4f 0%, #ff7875 100%)'
                           : 'linear-gradient(90deg, #52c41a 0%, #95de64 100%)',
-                        transition: 'width 0.3s'
+                        transition: 'width 0.3s ease'
                       }} />
                     </div>
                     {isOverCapacity && (
                       <Text type="danger" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
-                        ADVERTENCIA: La capacidad excede el límite del venue. Reducí la capacidad de las secciones.
+                        ⚠️ La capacidad excede el límite del venue.
                       </Text>
                     )}
                   </div>
@@ -2085,8 +2017,8 @@ function ShowsAdmin() {
         )}
 
         {showSections.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>Secciones existentes:</Text>
+          <div style={{ marginBottom: 24 }}>
+            <Text strong style={{ display: 'block', marginBottom: 12, fontSize: 16 }}>Secciones existentes</Text>
             <Table
               rowKey="id"
               size="small"
@@ -2103,17 +2035,15 @@ function ShowsAdmin() {
                   title: 'Tipo', 
                   dataIndex: 'kind', 
                   key: 'kind',
-                  width: 120,
                   render: (kind) => (
                     <Tag color={kind === 'GA' ? 'green' : 'blue'}>
-                      {kind === 'GA' ? '🎫 General' : '🪑 Numerada'}
+                      {kind === 'GA' ? 'General' : 'Numerada'}
                     </Tag>
                   ),
                 },
                 { 
                   title: 'Precio', 
                   key: 'price',
-                  width: 120,
                   render: (_, record) => (
                     <Text strong>${(record.price_cents / 100).toLocaleString()}</Text>
                   ),
@@ -2122,39 +2052,36 @@ function ShowsAdmin() {
                   title: 'Capacidad', 
                   dataIndex: 'capacity', 
                   key: 'capacity',
-                  width: 100,
                   render: (cap) => <Text>{cap.toLocaleString()}</Text>
                 },
                 { 
-                  title: 'Disponibles', 
+                  title: 'Disp.', 
                   dataIndex: 'available_seats', 
                   key: 'available_seats',
-                  width: 100,
                   render: (seats) => (
-                    <Tag color={seats > 50 ? 'green' : seats > 0 ? 'orange' : 'red'}>
+                    <Tag color={seats > 50 ? 'success' : seats > 0 ? 'warning' : 'error'}>
                       {seats || 0}
                     </Tag>
                   ),
                 },
                 {
-                  title: 'Acciones',
+                  title: '',
                   key: 'actions',
-                  width: 120,
+                  width: 100,
                   render: (_, section) => (
                     <Space size="small">
                       <Button
                         icon={<EditOutlined />}
                         size="small"
-                        type="primary"
+                        type="text"
                         onClick={() => handleEditSection(section)}
-                        title="Editar sección"
                       />
                       <Button
                         icon={<DeleteOutlined />}
                         size="small"
+                        type="text"
                         danger
                         onClick={() => handleDeleteSection(section)}
-                        title="Eliminar sección"
                       />
                     </Space>
                   ),
@@ -2168,65 +2095,67 @@ function ShowsAdmin() {
           <Form.List name="sections">
             {(fields, { add, remove }) => (
               <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Text strong style={{ fontSize: 16 }}>Nuevas Secciones</Text>
+                  <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
+                    Agregar
+                  </Button>
+                </div>
+
                 {fields.map(({ key, name, ...restField }) => (
-                  <Card key={key} size="small" style={{ marginBottom: 12 }}>
+                  <Card key={key} size="small" style={{ marginBottom: 12, background: 'rgba(0,0,0,0.02)' }}>
                     <Row gutter={16}>
-                      <Col span={12}>
+                      <Col span={8}>
                         <Form.Item
                           {...restField}
                           name={[name, 'name']}
-                          label="Nombre de la sección"
+                          label="Nombre"
                           rules={[{ required: true, message: 'Requerido' }]}
                         >
-                          <Input placeholder="Ej: Platea, Campo, Pullman" />
+                          <Input placeholder="Ej: Platea" />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col span={6}>
                         <Form.Item
                           {...restField}
                           name={[name, 'kind']}
                           label="Tipo"
                           rules={[{ required: true, message: 'Requerido' }]}
                         >
-                          <Select placeholder="Seleccionar tipo">
-                            <Option value="SEATED">🪑 Numerada</Option>
-                            <Option value="GA">🎫 General</Option>
+                          <Select placeholder="Tipo">
+                            <Option value="SEATED">Numerada</Option>
+                            <Option value="GA">General</Option>
                           </Select>
                         </Form.Item>
                       </Col>
-                      <Col span={8}>
+                      <Col span={5}>
                         <Form.Item
                           {...restField}
                           name={[name, 'price']}
-                          label="Precio ($)"
+                          label="Precio"
                           rules={[{ required: true, message: 'Requerido' }]}
                         >
-                          <Input type="number" placeholder="15000" />
+                          <Input type="number" prefix="$" />
                         </Form.Item>
                       </Col>
-                      <Col span={8}>
+                      <Col span={5}>
                         <Form.Item
                           {...restField}
                           name={[name, 'capacity']}
-                          label="Capacidad"
+                          label="Cap."
                           rules={[{ required: true, message: 'Requerido' }]}
                         >
-                          <Input type="number" placeholder="100" />
+                          <Input type="number" />
                         </Form.Item>
                       </Col>
-                      <Col span={8}>
-                        <Form.Item label=" ">
-                          <Button danger onClick={() => remove(name)} block>
-                            Eliminar
-                          </Button>
-                        </Form.Item>
+                      <Col span={24} style={{ textAlign: 'right' }}>
+                        <Button type="text" danger size="small" onClick={() => remove(name)}>
+                          Eliminar
+                        </Button>
                       </Col>
                     </Row>
                   </Card>
                 ))}
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                  Agregar Sección
-                </Button>
               </>
             )}
           </Form.List>
@@ -2235,26 +2164,24 @@ function ShowsAdmin() {
 
       {/* Modal Editar Venue */}
       <Modal
-        title={selectedShow ? `Cambiar Venue • ${selectedShow.event_name}` : 'Cambiar Venue'}
+        title="Cambiar Venue"
         open={editVenueOpen}
         onCancel={() => setEditVenueOpen(false)}
         onOk={submitEditVenue}
         okText="Guardar"
         confirmLoading={editVenueLoading}
         width={600}
+        className="glass-modal"
       >
         {selectedShow && (
           <div style={{ 
-            background: '#fff7e6', 
-            padding: 12, 
-            borderRadius: 8, 
-            marginBottom: 16,
-            border: '1px solid #ffd591'
+            background: 'rgba(102, 126, 234, 0.1)', 
+            padding: 16, 
+            borderRadius: 12, 
+            marginBottom: 24
           }}>
-            <Text style={{ fontSize: 13 }}>
+            <Text>
               <strong>Show:</strong> {selectedShow.event_name}
-              <br />
-              <strong>Fecha:</strong> {selectedShow.startsAt ? format(new Date(selectedShow.startsAt), "dd 'de' MMMM 'de' yyyy HH:mm", { locale: es }) : 'N/A'}
               <br />
               <strong>Venue actual:</strong> {selectedShow.venue_name || 'Sin venue'}
             </Text>
@@ -2268,67 +2195,26 @@ function ShowsAdmin() {
             rules={[{ required: true, message: 'Seleccioná un venue' }]}
           >
             <Select
-              placeholder={venuesLoading ? "Cargando venues..." : "Seleccionar venue"}
+              placeholder="Buscar venue..."
               showSearch
               loading={venuesLoading}
-              disabled={venuesLoading}
               filterOption={(input, option) =>
                 option?.children?.toLowerCase().includes(input.toLowerCase())
               }
-              notFoundContent={venuesLoading ? "Cargando..." : "No hay venues disponibles"}
             >
-              {venues && venues.length > 0 ? (
-                venues.map(venue => (
-                  <Option key={venue.id} value={venue.id}>
-                    {venue.name} - {venue.city || 'Sin ciudad'} ({venue.max_capacity?.toLocaleString()} personas)
-                  </Option>
-                ))
-              ) : (
-                !venuesLoading && (
-                  <Option disabled value="">
-                    No hay venues disponibles
-                  </Option>
-                )
-              )}
+              {venues.map(venue => (
+                <Option key={venue.id} value={venue.id}>
+                  {venue.name} - {venue.city}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
-          
-          {/* Debug info */}
-          {!venuesLoading && venues.length === 0 && (
-            <div style={{ 
-              background: '#fff2f0', 
-              padding: 12, 
-              borderRadius: 8,
-              marginBottom: 16,
-              border: '1px solid #ffccc7'
-            }}>
-              <Text type="danger" style={{ fontSize: 12 }}>
-                ⚠️ No se encontraron venues. Asegurate de tener venues creados en la base de datos.
-              </Text>
-            </div>
-          )}
-
-          <div style={{ 
-            background: '#e6f7ff', 
-            padding: 12, 
-            borderRadius: 8,
-            border: '1px solid #91d5ff'
-          }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              ℹ️ <strong>Nota:</strong> Al cambiar el venue del evento, todos los shows asociados heredarán el nuevo venue.
-            </Text>
-          </div>
         </Form>
       </Modal>
 
       {/* Modal de Edición de Show */}
       <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <EditOutlined style={{ color: '#667eea' }} />
-            <span>Editar Show</span>
-          </div>
-        }
+        title="Editar Show"
         open={editModalOpen}
         onCancel={() => {
           setEditModalOpen(false);
@@ -2338,7 +2224,8 @@ function ShowsAdmin() {
         footer={null}
         width={700}
         centered
-        destroyOnClose
+
+        className="glass-modal"
       >
         {editModalOpen && selectedShow && (
           <Form
@@ -2346,36 +2233,39 @@ function ShowsAdmin() {
             layout="vertical"
             onFinish={handleUpdateShow}
           >
-            <Form.Item
-              label="Fecha y Hora"
-              name="startsAt"
-              rules={[{ required: true, message: 'Seleccione fecha y hora' }]}
-            >
-              <DatePicker 
-                showTime 
-                style={{ width: '100%' }} 
-                format="DD/MM/YYYY HH:mm"
-                placeholder="Seleccionar fecha y hora"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Estado"
-              name="status"
-              rules={[{ required: true, message: 'Seleccione el estado' }]}
-            >
-              <Select placeholder="Seleccionar estado">
-                <Option value="DRAFT">Borrador</Option>
-                <Option value="PUBLISHED">Publicado</Option>
-                <Option value="CANCELLED">Cancelado</Option>
-                <Option value="COMPLETED">Completado</Option>
-              </Select>
-            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Fecha y Hora"
+                  name="startsAt"
+                  rules={[{ required: true, message: 'Requerido' }]}
+                >
+                  <DatePicker 
+                    showTime 
+                    style={{ width: '100%' }} 
+                    format="DD/MM/YYYY HH:mm"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Estado"
+                  name="status"
+                  rules={[{ required: true, message: 'Requerido' }]}
+                >
+                  <Select>
+                    <Option value="DRAFT">Borrador</Option>
+                    <Option value="PUBLISHED">Publicado</Option>
+                    <Option value="CANCELLED">Cancelado</Option>
+                    <Option value="COMPLETED">Completado</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
 
             <Form.Item
               label="Venue (Opcional)"
               name="venueId"
-              tooltip="Cambiar el venue del show"
             >
               <Select 
                 placeholder="Seleccionar venue"
@@ -2391,27 +2281,9 @@ function ShowsAdmin() {
               </Select>
             </Form.Item>
 
-            <div style={{ 
-              background: '#f0f5ff', 
-              padding: 12, 
-              borderRadius: 8,
-              marginBottom: 16,
-              border: '1px solid #adc6ff'
-            }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                ℹ️ <strong>Evento:</strong> {selectedShow.event_name}
-              </Text>
-            </div>
-
             <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
               <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button onClick={() => {
-                  setEditModalOpen(false);
-                  editForm.resetFields();
-                  setSelectedShow(null);
-                }}>
-                  Cancelar
-                </Button>
+                <Button onClick={() => setEditModalOpen(false)}>Cancelar</Button>
                 <Button 
                   type="primary" 
                   htmlType="submit"
@@ -2430,24 +2302,14 @@ function ShowsAdmin() {
 
       {/* Modal de Visualización de Show */}
       <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CalendarOutlined style={{ color: '#667eea' }} />
-            <span>Detalles del Show</span>
-          </div>
-        }
+        title="Detalles del Show"
         open={viewModalOpen}
         onCancel={() => {
           setViewModalOpen(false);
           setSelectedShow(null);
         }}
         footer={[
-          <Button key="close" onClick={() => {
-            setViewModalOpen(false);
-            setSelectedShow(null);
-          }}>
-            Cerrar
-          </Button>,
+          <Button key="close" onClick={() => setViewModalOpen(false)}>Cerrar</Button>,
           <Button 
             key="edit" 
             type="primary"
@@ -2464,103 +2326,50 @@ function ShowsAdmin() {
             Editar
           </Button>
         ]}
-        width={900}
+        width={800}
         centered
+        className="glass-modal"
       >
         {selectedShow && (
-          <div>
-            <Row gutter={[16, 16]}>
+          <div style={{ padding: 16 }}>
+            <Row gutter={[24, 24]}>
               <Col span={24}>
-                <Card size="small" style={{ background: '#fafafa' }}>
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                    <div>
-                      <Text type="secondary">Evento</Text>
-                      <Title level={4} style={{ margin: '4px 0' }}>{selectedShow.event_name}</Title>
-                    </div>
-                    
-                    <Divider style={{ margin: '8px 0' }} />
-                    
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Text type="secondary">Fecha y Hora</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Text strong>
-                            {selectedShow.starts_at 
-                              ? format(new Date(selectedShow.starts_at), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })
-                              : 'Sin fecha'}
-                          </Text>
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <Text type="secondary">Estado</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Tag color={selectedShow.status === 'PUBLISHED' ? 'green' : 'default'}>
-                            {selectedShow.status || 'PUBLISHED'}
-                          </Tag>
-                        </div>
-                      </Col>
-                    </Row>
-
-                    <Divider style={{ margin: '8px 0' }} />
-
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Text type="secondary">Venue</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Text strong>{selectedShow.venue_name || 'Sin venue'}</Text>
-                          {selectedShow.venue_city && (
-                            <>
-                              <br />
-                              <Text type="secondary">📍 {selectedShow.venue_city}</Text>
-                            </>
-                          )}
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <Text type="secondary">Entradas Disponibles</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Tag color={selectedShow.available_seats > 50 ? 'green' : selectedShow.available_seats > 0 ? 'orange' : 'red'} style={{ fontSize: 14, padding: '4px 12px' }}>
-                            {selectedShow.available_seats || 0} entradas
-                          </Tag>
-                        </div>
-                      </Col>
-                    </Row>
-
-                    <Divider style={{ margin: '8px 0' }} />
-
-                    <Row gutter={16}>
-                      <Col span={12}>
-                        <Text type="secondary">ID del Show</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Text code>{selectedShow.id}</Text>
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <Text type="secondary">ID del Evento</Text>
-                        <div style={{ marginTop: 4 }}>
-                          <Text code>{selectedShow.eventId || selectedShow.event_id}</Text>
-                        </div>
-                      </Col>
-                    </Row>
-                  </Space>
-                </Card>
+                <Title level={3} style={{ margin: 0 }}>{selectedShow.event_name}</Title>
+                <Divider style={{ margin: '16px 0' }} />
+              </Col>
+              
+              <Col span={12}>
+                <Text type="secondary">Fecha</Text>
+                <div style={{ fontSize: 16, fontWeight: 500 }}>
+                  {selectedShow.starts_at 
+                    ? format(new Date(selectedShow.starts_at), "dd MMM yyyy HH:mm", { locale: es })
+                    : 'Sin fecha'}
+                </div>
+              </Col>
+              
+              <Col span={12}>
+                <Text type="secondary">Estado</Text>
+                <div>
+                  <Tag color={selectedShow.status === 'PUBLISHED' ? 'green' : 'default'}>
+                    {selectedShow.status || 'PUBLISHED'}
+                  </Tag>
+                </div>
               </Col>
 
-              {/* Mapa de Google Maps si tiene venue con coordenadas */}
-              {mapsLoaded && selectedShow.venue_name && (selectedShow.venue_latitude || selectedShow.venue_longitude) && (
-                <Col span={24}>
-                  <VenueMap 
-                    venue={{
-                      name: selectedShow.venue_name,
-                      address: selectedShow.venue_address || `${selectedShow.venue_name}, ${selectedShow.venue_city || 'Argentina'}`,
-                      latitude: selectedShow.venue_latitude,
-                      longitude: selectedShow.venue_longitude
-                    }}
-                    height={300}
-                    showDirections={true}
-                  />
-                </Col>
-              )}
+              <Col span={12}>
+                <Text type="secondary">Venue</Text>
+                <div style={{ fontSize: 16, fontWeight: 500 }}>{selectedShow.venue_name || 'Sin venue'}</div>
+                {selectedShow.venue_city && <Text type="secondary">{selectedShow.venue_city}</Text>}
+              </Col>
+
+              <Col span={12}>
+                <Text type="secondary">Entradas Disponibles</Text>
+                <div>
+                  <Tag color={selectedShow.available_seats > 0 ? 'green' : 'red'}>
+                    {selectedShow.available_seats || 0} entradas
+                  </Tag>
+                </div>
+              </Col>
             </Row>
           </div>
         )}
@@ -2568,107 +2377,40 @@ function ShowsAdmin() {
 
       {/* Modal Editar Sección */}
       <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <EditOutlined style={{ color: '#667eea' }} />
-            <span>Editar Sección</span>
-          </div>
-        }
+        title="Editar Sección"
         open={editSectionOpen}
-        onCancel={() => {
-          setEditSectionOpen(false);
-          editSectionForm.resetFields();
-          setSelectedSection(null);
-        }}
+        onCancel={() => setEditSectionOpen(false)}
         onOk={submitEditSection}
-        okText="Guardar Cambios"
+        okText="Guardar"
         confirmLoading={editSectionLoading}
-        width={600}
+        width={500}
+        className="glass-modal"
       >
-        {selectedSection && (
-          <div>
-            <div style={{ 
-              background: '#f0f5ff', 
-              padding: 12, 
-              borderRadius: 8, 
-              marginBottom: 16,
-              border: '1px solid #d6e4ff'
-            }}>
-              <Text style={{ fontSize: 13 }}>
-                <strong>Show:</strong> {selectedShow?.event_name}
-                <br />
-                <strong>Sección original:</strong> {selectedSection.name}
-              </Text>
-            </div>
-
-            <Form layout="vertical" form={editSectionForm}>
-              <Form.Item
-                name="name"
-                label="Nombre de la sección"
-                rules={[{ required: true, message: 'Ingresá un nombre' }]}
-              >
-                <Input placeholder="Ej: Platea Alta, Campo VIP" />
+        <Form layout="vertical" form={editSectionForm}>
+          <Form.Item name="name" label="Nombre" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="kind" label="Tipo" rules={[{ required: true }]}>
+            <Select>
+              <Option value="GA">General</Option>
+              <Option value="SEATED">Numerada</Option>
+            </Select>
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="price" label="Precio" rules={[{ required: true }]}>
+                <Input type="number" prefix="$" />
               </Form.Item>
-
-              <Form.Item
-                name="kind"
-                label="Tipo"
-                rules={[{ required: true, message: 'Seleccioná el tipo' }]}
-              >
-                <Select>
-                  <Option value="GA">🎫 General (sin asientos numerados)</Option>
-                  <Option value="SEATED">🪑 Numerada (con asientos numerados)</Option>
-                </Select>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="capacity" label="Capacidad" rules={[{ required: true }]}>
+                <Input type="number" />
               </Form.Item>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Precio ($)"
-                    rules={[{ required: true, message: 'Ingresá un precio' }]}
-                  >
-                    <Input 
-                      type="number" 
-                      min={0} 
-                      step={1} 
-                      placeholder="15000"
-                      prefix="$"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="capacity"
-                    label="Capacidad"
-                    rules={[{ required: true, message: 'Ingresá capacidad' }]}
-                  >
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      step={1} 
-                      placeholder="100"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <div style={{ 
-                background: '#fff7e6', 
-                padding: 12, 
-                borderRadius: 8,
-                border: '1px solid #ffd591'
-              }}>
-                <Text type="warning" style={{ fontSize: 12 }}>
-                  ⚠️ <strong>Importante:</strong> Al cambiar la capacidad, se ajustarán los asientos disponibles. 
-                  No se puede reducir por debajo de los asientos ya vendidos.
-                </Text>
-              </div>
-            </Form>
-          </div>
-        )}
+            </Col>
+          </Row>
+        </Form>
       </Modal>
-    </Card>
+    </div>
   );
 }
 
@@ -2967,7 +2709,7 @@ function VenuesAdmin() {
         footer={null}
         width={800}
         centered
-        destroyOnClose
+
       >
         {editModalOpen && (
           <Form
@@ -3305,11 +3047,4 @@ function HealthContent() {
   );
 }
 
-// Settings Admin
-function SettingsAdmin() {
-  return (
-    <Card>
-      <Title level={4}>Configuración del Sistema</Title>
-      <Text>Configuraciones generales de la plataforma...</Text>
-    </Card>
-  );}
+

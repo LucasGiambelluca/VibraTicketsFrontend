@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Card, Typography, Form, Input, Button, Space, message, Alert, Row, Col, Checkbox } from 'antd';
-import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons';
+import { Card, Typography, Form, Input, Button, Space, message, Alert, Row, Col, Checkbox, Tooltip } from 'antd';
+import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, IdcardOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { validateDNI } from '../utils/validators';
 // TEMPORAL: reCAPTCHA deshabilitado hasta tener Site Key y backend configurado
 // import ReCaptcha from '../components/ReCaptcha';
 import logo from '../assets/VibraTicketLogo2.png';
@@ -36,6 +37,7 @@ export default function Register() {
         password: values.password,
         name: `${values.firstName} ${values.lastName}`,
         phone: values.phone,
+        dni: values.dni, // ✅ NUEVO: DNI obligatorio
         role: 'CUSTOMER' // Por defecto, los registros son clientes
         // TEMPORAL: captchaToken deshabilitado
         // captchaToken: captchaToken
@@ -255,6 +257,43 @@ export default function Register() {
                   </Form.Item>
                 </Col>
               </Row>
+
+              {/* DNI - NUEVO CAMPO OBLIGATORIO */}
+              <Form.Item
+                label={
+                  <span>
+                    DNI{' '}
+                    <Tooltip title="Documento Nacional de Identidad - Requerido para validar compras (máximo 5 boletos por evento)">
+                      <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                    </Tooltip>
+                  </span>
+                }
+                name="dni"
+                rules={[
+                  { required: true, message: 'El DNI es obligatorio' },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return;
+                      const validation = validateDNI(value);
+                      if (!validation.valid) {
+                        throw new Error(validation.error);
+                      }
+                    }
+                  }
+                ]}
+              >
+                <Input 
+                  prefix={<IdcardOutlined style={{ color: '#bfbfbf' }} />}
+                  placeholder="12345678"
+                  maxLength={8}
+                  style={{ borderRadius: 8 }}
+                  onChange={(e) => {
+                    // Solo permitir números
+                    const value = e.target.value.replace(/\D/g, '');
+                    form.setFieldsValue({ dni: value });
+                  }}
+                />
+              </Form.Item>
 
               <Row gutter={16}>
                 <Col span={12}>

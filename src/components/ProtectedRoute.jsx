@@ -21,6 +21,16 @@ export default function ProtectedRoute({
   const { openLoginModal } = useLoginModal();
   const location = useLocation();
 
+  // Si no está autenticado, abrir modal y mostrar contenido difuminado
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      openLoginModal(() => {
+        // Callback después de login exitoso
+        console.log('✅ Login exitoso, permaneciendo en:', location.pathname);
+      });
+    }
+  }, [loading, isAuthenticated, openLoginModal, location.pathname]);
+
   // Mostrar spinner mientras se carga la autenticación
   if (loading) {
     return (
@@ -35,16 +45,6 @@ export default function ProtectedRoute({
       </div>
     );
   }
-
-  // Si no está autenticado, abrir modal y mostrar contenido difuminado
-  useEffect(() => {
-    if (!isAuthenticated) {
-      openLoginModal(() => {
-        // Callback después de login exitoso
-        console.log('✅ Login exitoso, permaneciendo en:', location.pathname);
-      });
-    }
-  }, [isAuthenticated, openLoginModal, location.pathname]);
 
   if (!isAuthenticated) {
     // Mostrar el contenido con un overlay difuminado

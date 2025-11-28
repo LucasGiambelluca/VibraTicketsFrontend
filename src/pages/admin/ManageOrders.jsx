@@ -138,15 +138,27 @@ export default function ManageOrders() {
           // Recargar la lista de órdenes
           await loadPendingOrders();
         } catch (error) {
-          console.error('Error cancelando orden:', error);
           
           // Manejar errores específicos
           if (error.status === 404) {
             message.error('La orden no fue encontrada');
           } else if (error.status === 409) {
             message.error(error.message || 'La orden no se puede cancelar porque no está pendiente');
+          } else if (error.status === 400) {
+            message.error(error.response?.data?.message || error.message || 'Datos inválidos');
+          } else if (error.status === 403) {
+            message.error('No tienes permisos para cancelar órdenes');
+          } else if (error.status === 500) {
+            message.error('Error del servidor. Por favor, contacta al administrador.');
+          } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+            message.error('Error de conexión. Verifica que el backend esté corriendo.');
           } else {
-            message.error('Error al cancelar la orden');
+            // Mostrar el mensaje de error del backend si existe
+            const errorMsg = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           'Error al cancelar la orden';
+            message.error(errorMsg);
           }
         } finally {
           setCancellingOrderId(null);
