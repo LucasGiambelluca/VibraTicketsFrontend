@@ -165,6 +165,21 @@ export const adminUsersApi = {
   }
 };
 
+// ============================================
+// ADMIN PAYMENTS API - Monitor de Pagos (Solo ADMIN)
+// ============================================
+export const adminPaymentsApi = {
+  // Obtener logs de pagos con filtros y paginación
+  getPaymentLogs: (params = {}) => {
+    const { page = 1, limit = 20, status, orderId, paymentId } = params;
+    const query = { page, limit };
+    if (status) query.status = status;
+    if (orderId) query.orderId = orderId;
+    if (paymentId) query.paymentId = paymentId;
+    return apiClient.get(`${API_BASE}/admin/payments/logs`, query);
+  }
+};
+
 // Events API
 export const eventsApi = {
   // Lista paginada y filtrada de eventos
@@ -1034,6 +1049,7 @@ export default {
   auth: authApi,
   users: usersApi,
   adminUsers: adminUsersApi,
+  adminPayments: adminPaymentsApi,
   events: eventsApi,
   eventImages: eventImagesApi,
   eventStyles: eventStylesApi,

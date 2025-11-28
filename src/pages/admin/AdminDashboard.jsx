@@ -18,7 +18,8 @@ import {
   BarChartOutlined,
   ShoppingCartOutlined,
   TagsOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  DollarOutlined
 } from '@ant-design/icons';
 import CreateEvent from '../../components/CreateEvent';
 import CreateVenue from '../../components/CreateVenue';
@@ -31,6 +32,7 @@ import FinancialReports from './FinancialReports';
 import AdminUsersPanel from './AdminUsersPanel';
 import ManageOrders from './ManageOrders';
 import DiscountCodes from './DiscountCodes';
+import PaymentMonitor from './PaymentMonitor';
 import { getImageUrl } from '../../utils/imageUtils';
 import { useEvents } from '../../hooks/useEvents';
 import { showsApi, eventsApi, eventStylesApi } from '../../services/apiService';
@@ -110,6 +112,11 @@ export default function AdminDashboard() {
       label: 'Códigos de Descuento',
     },
     {
+      key: 'payments-monitor',
+      icon: <DollarOutlined />,
+      label: 'Monitor de Pagos',
+    },
+    {
       key: 'health',
       icon: <HeartOutlined />,
       label: 'Estado del Sistema',
@@ -139,6 +146,8 @@ export default function AdminDashboard() {
         return <ManageOrders />;
       case 'discount-codes':
         return <DiscountCodes />;
+      case 'payments-monitor':
+        return <PaymentMonitor />;
       case 'health':
         return <HealthContent />;
       case 'mercadopago':
