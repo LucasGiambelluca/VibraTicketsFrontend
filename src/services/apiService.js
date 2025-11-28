@@ -945,34 +945,34 @@ export const apiUtils = {
 // Payment Config API - Configuración de MercadoPago (ADMIN)
 export const paymentConfigApi = {
   // Obtener configuración actual de MercadoPago
-  // RUTA: GET /api/payment-config/mercadopago
+  // RUTA: GET /api/admin/mercadopago/settings
   getMercadoPagoConfig: () => {
-    return apiClient.get(`${API_BASE}/payment-config/mercadopago`);
+    return apiClient.get(`${API_BASE}/admin/mercadopago/settings`);
   },
 
   // Configurar/Actualizar credenciales de MercadoPago
-  // RUTA: POST /api/payment-config/mercadopago
+  // RUTA: POST /api/admin/mercadopago/settings
   saveMercadoPagoConfig: (configData) => {
     // configData: { accessToken, publicKey?, isSandbox?, isActive?, config? }
-    return apiClient.post(`${API_BASE}/payment-config/mercadopago`, configData);
+    return apiClient.post(`${API_BASE}/admin/mercadopago/settings`, configData);
   },
 
   // Activar/Desactivar MercadoPago
-  // RUTA: PATCH /api/payment-config/mercadopago/toggle
+  // RUTA: PATCH /api/admin/mercadopago/settings/toggle
   toggleMercadoPago: (isActive) => {
-    return apiClient.patch(`${API_BASE}/payment-config/mercadopago/toggle`, { isActive });
+    return apiClient.patch(`${API_BASE}/admin/mercadopago/settings/toggle`, { isActive });
   },
 
   // Probar conexión con MercadoPago
-  // RUTA: POST /api/payment-config/mercadopago/test
+  // RUTA: POST /api/admin/mercadopago/settings/test
   testMercadoPagoConnection: () => {
-    return apiClient.post(`${API_BASE}/payment-config/mercadopago/test`);
+    return apiClient.post(`${API_BASE}/admin/mercadopago/settings/test`);
   },
 
   // Eliminar credenciales de MercadoPago
-  // RUTA: DELETE /api/payment-config/mercadopago
+  // RUTA: DELETE /api/admin/mercadopago/settings
   deleteMercadoPagoConfig: () => {
-    return apiClient.delete(`${API_BASE}/payment-config/mercadopago`);
+    return apiClient.delete(`${API_BASE}/admin/mercadopago/settings`);
   }
 };
 

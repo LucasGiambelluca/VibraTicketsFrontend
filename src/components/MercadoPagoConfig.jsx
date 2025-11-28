@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// Force update
 import { paymentConfigApi } from '../services/apiService';
 import './MercadoPagoConfig.css';
 
@@ -24,6 +25,7 @@ const MercadoPagoConfig = () => {
   const [formData, setFormData] = useState({
     accessToken: '',
     publicKey: '',
+    webhookSecret: '',
     isSandbox: true,
     isActive: false,
     notificationUrl: '',
@@ -49,6 +51,7 @@ const MercadoPagoConfig = () => {
         setFormData({
           accessToken: '', // Por seguridad, no mostrar el token
           publicKey: data.publicKey || '',
+          webhookSecret: data.webhookSecret || '',
           isSandbox: data.isSandbox !== undefined ? data.isSandbox : true,
           isActive: data.isActive || false,
           notificationUrl: data.config?.notification_url || '',
@@ -95,6 +98,7 @@ const MercadoPagoConfig = () => {
       const configData = {
         accessToken: formData.accessToken,
         publicKey: formData.publicKey || undefined,
+        webhookSecret: formData.webhookSecret || undefined,
         isSandbox: formData.isSandbox,
         isActive: formData.isActive,
         config: {
@@ -347,6 +351,21 @@ const MercadoPagoConfig = () => {
               value={formData.publicKey}
               onChange={handleInputChange}
               placeholder="TEST-pub-123..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="webhookSecret">
+              Webhook Secret
+              <span className="help-text">Para validar la firma de notificaciones</span>
+            </label>
+            <input
+              type="text"
+              id="webhookSecret"
+              name="webhookSecret"
+              value={formData.webhookSecret}
+              onChange={handleInputChange}
+              placeholder="w123..."
             />
           </div>
 
