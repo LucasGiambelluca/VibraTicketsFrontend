@@ -107,7 +107,7 @@ export const usersApi = {
 
   // Obtener tickets del usuario
   getMyTickets: () => {
-    return apiClient.get(`${API_BASE}/users/me/tickets`);
+    return apiClient.get(`${API_BASE}/tickets/my-tickets`);
   },
 
   // Obtener mis reservas temporales (holds)

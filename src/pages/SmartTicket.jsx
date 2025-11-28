@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, Typography, Row, Col, Button, QRCode, Space, Divider, message, Spin, Alert } from 'antd';
-import { DownloadOutlined, ShareAltOutlined, EnvironmentOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ShareAltOutlined, EnvironmentOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useParams, Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import jsPDF from 'jspdf';
@@ -9,6 +9,7 @@ import { testPaymentsApi } from '../services/apiService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import logo from '../assets/VibraTicketLogo2.png';
+import { getEventImageUrl } from '../utils/imageUtils';
 
 const { Title, Text } = Typography;
 
@@ -122,7 +123,8 @@ export default function SmartTicket() {
         sector: section,
         seatNumber: seat
       })),
-      status: ticketData.status || 'ISSUED'
+      status: ticketData.status || 'ISSUED',
+      availability_status: ticketData.availability_status || 'available' // Default to available if not present
     };
 
     return formatted;
@@ -269,10 +271,12 @@ export default function SmartTicket() {
             border: 'none'
           }}
         >
-          {/* Hero Banner con Logo */}
+          {/* Hero Banner con Imagen del Evento */}
           <div style={{
-            height: 200,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            height: 220,
+            background: `linear-gradient(rgba(102, 126, 234, 0.85), rgba(118, 75, 162, 0.9)), url(${
+              ticketData.event ? getEventImageUrl(ticketData.event) : ''
+            }) center/cover no-repeat`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -285,18 +289,21 @@ export default function SmartTicket() {
               src={logo}
               alt="VibraTicket"
               style={{
-                height: 50,
+                height: 40,
                 width: 'auto',
                 marginBottom: 16,
-                filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                filter: 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                opacity: 0.9
               }}
             />
             <Title level={1} style={{ 
               color: 'white', 
-              fontSize: '2.5rem', 
+              fontSize: '2.2rem', 
               fontWeight: 800,
               margin: 0,
-              textAlign: 'center'
+              textAlign: 'center',
+              textShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              lineHeight: 1.2
             }}>
               {formattedTicket.event}
             </Title>
@@ -399,24 +406,61 @@ export default function SmartTicket() {
                     Smart Ticket
                   </Title>
                   
-                  <div style={{
-                    background: '#f8f9fa',
-                    padding: 24,
-                    borderRadius: 16,
-                    marginBottom: 24
-                  }}>
-                    <QRCode
-                      value={formattedTicket.qrCode}
-                      size={180}
-                      style={{ marginBottom: 16 }}
-                    />
-                    <Text type="secondary" style={{ fontSize: '0.85rem', display: 'block', marginBottom: 4 }}>
-                      Ticket: {formattedTicket.ticketNumber}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: '0.85rem' }}>
-                      Orden: {formattedTicket.orderNumber}
-                    </Text>
-                  </div>
+                  {formattedTicket.status === 'ISSUED' && formattedTicket.availability_status === 'pending' ? (
+                     <div style={{
+                      background: '#f6ffed',
+                      padding: '32px 24px',
+                      borderRadius: 16,
+                      marginBottom: 24,
+                      border: '1px dashed #b7eb8f',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <div style={{ 
+                        background: '#52c41a', 
+                        borderRadius: '50%', 
+                        width: 80, height: 80, 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: 16,
+                        boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
+                      }}>
+                        <SafetyCertificateOutlined style={{ fontSize: 40, color: 'white' }} />
+                      </div>
+                      <Title level={4} style={{ color: '#389e0d', marginBottom: 8 }}>
+                        ¡Lugar Asegurado!
+                      </Title>
+                      <Text type="secondary" style={{ textAlign: 'center', marginBottom: 16 }}>
+                        Por seguridad, tu código QR estará disponible <strong>24hs antes del evento</strong>.
+                      </Text>
+                      <div style={{ background: 'rgba(82, 196, 26, 0.1)', padding: '8px 16px', borderRadius: 8 }}>
+                         <Text style={{ color: '#389e0d', fontSize: 12 }}>
+                           <LockOutlined style={{ marginRight: 4 }} />
+                           Tu entrada está 100% confirmada
+                         </Text>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: '#f8f9fa',
+                      padding: 24,
+                      borderRadius: 16,
+                      marginBottom: 24
+                    }}>
+                      <QRCode
+                        value={formattedTicket.qrCode}
+                        size={180}
+                        style={{ marginBottom: 16 }}
+                      />
+                      <Text type="secondary" style={{ fontSize: '0.85rem', display: 'block', marginBottom: 4 }}>
+                        Ticket: {formattedTicket.ticketNumber}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: '0.85rem' }}>
+                        Orden: {formattedTicket.orderNumber}
+                      </Text>
+                    </div>
+                  )}
 
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Button
@@ -425,15 +469,16 @@ export default function SmartTicket() {
                       size="large"
                       block
                       onClick={downloadTicketPDF}
+                      disabled={formattedTicket.availability_status === 'pending'}
                       style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: formattedTicket.availability_status === 'pending' ? undefined : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         border: 'none',
                         borderRadius: 8,
                         fontWeight: 600,
                         height: 48
                       }}
                     >
-                      Descargar PDF
+                      {formattedTicket.availability_status === 'pending' ? 'Descarga disponible 24hs antes' : 'Descargar PDF'}
                     </Button>
                     
                     <Button
@@ -455,6 +500,7 @@ export default function SmartTicket() {
                       size="large"
                       block
                       onClick={printTicket}
+                      disabled={formattedTicket.availability_status === 'pending'}
                       style={{
                         borderRadius: 8,
                         fontWeight: 600,

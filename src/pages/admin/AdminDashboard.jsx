@@ -1740,37 +1740,60 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
       title: 'ID', 
       dataIndex: 'id', 
       key: 'id', 
-      width: 80 
+      width: 80,
+      render: (text) => <Text type="secondary" style={{ fontSize: 12 }}>#{text}</Text>
+    },
+    { 
+      title: 'Imagen', 
+      key: 'image',
+      width: 100,
+      render: (_, record) => {
+        // Buscar el evento asociado para obtener la imagen
+        const event = events.find(e => e.id === (record.eventId || record.event_id));
+        const imageUrl = event?.image_url || record.image_url;
+        
+        return (
+          <Avatar 
+            src={imageUrl ? getImageUrl(imageUrl, 'Evento') : undefined} 
+            size={64} 
+            shape="square"
+            style={{ backgroundColor: '#f0f0f0', border: '1px solid #d9d9d9' }}
+          >
+            {!imageUrl && '📅'}
+          </Avatar>
+        );
+      }
     },
     { 
       title: 'Evento', 
       dataIndex: 'event_name', 
       key: 'event_name',
-      render: (text, record) => text || `Evento #${record.eventId || record.event_id || 'N/A'}`
+      render: (text, record) => (
+        <div>
+          <Text strong style={{ fontSize: 16 }}>{text || `Evento #${record.eventId || record.event_id || 'N/A'}`}</Text>
+          <br />
+          <Tag color={record.status === 'PUBLISHED' ? 'green' : 'default'} style={{ marginTop: 4 }}>
+            {record.status || 'PUBLISHED'}
+          </Tag>
+        </div>
+      )
     },
     { 
-      title: 'Fecha', 
-      key: 'date',
+      title: 'Fecha y Hora', 
+      key: 'datetime',
       render: (_, record) => {
         const date = record.startsAt || record.starts_at;
         if (!date) return 'Sin fecha';
         try {
-          return format(new Date(date), 'dd MMM yyyy', { locale: es });
+          const dateObj = new Date(date);
+          return (
+            <Space direction="vertical" size={0}>
+              <Text strong>{format(dateObj, 'dd MMM yyyy', { locale: es })}</Text>
+              <Text type="secondary">{format(dateObj, 'HH:mm', { locale: es })} hs</Text>
+            </Space>
+          );
         } catch {
           return 'Fecha inválida';
-        }
-      }
-    },
-    { 
-      title: 'Hora', 
-      key: 'time',
-      render: (_, record) => {
-        const date = record.startsAt || record.starts_at;
-        if (!date) return 'Sin hora';
-        try {
-          return format(new Date(date), 'HH:mm', { locale: es });
-        } catch {
-          return 'Hora inválida';
         }
       }
     },
@@ -1800,16 +1823,24 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
       title: 'Disponibles', 
       dataIndex: 'available_seats', 
       key: 'available_seats',
-      render: (seats) => (
-        <Tag color={seats > 50 ? 'green' : seats > 0 ? 'orange' : 'red'}>
-          {seats || 0} entradas
-        </Tag>
-      ),
+      render: (seats) => {
+        const numSeats = Number(seats) || 0;
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <Tag 
+              color={numSeats > 50 ? 'success' : numSeats > 0 ? 'warning' : 'error'}
+              style={{ fontSize: 14, padding: '4px 12px', borderRadius: 12 }}
+            >
+              {numSeats.toLocaleString('es-AR')} entradas
+            </Tag>
+          </div>
+        );
+      },
     },
     {
       title: 'Acciones',
       key: 'actions',
-      width: 400,
+      width: 200,
       render: (_, record) => (
         <Space direction="vertical" size="small" style={{ width: '100%' }}>
           <Space>

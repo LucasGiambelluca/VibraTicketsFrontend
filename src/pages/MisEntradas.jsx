@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Empty, Button, Typography, Divider, Tag, Space, message, Drawer, Select, QRCode, Input, Spin } from 'antd';
-import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, QrcodeOutlined, CheckCircleOutlined, SwapOutlined, SearchOutlined, FilterOutlined, CloseCircleOutlined, DownloadOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
-import { ordersApi, testPaymentsApi, usersApi } from '../services/apiService';
+import { Row, Col, Card, Empty, Button, Typography, Tag, Space, message, Input, Spin, Divider } from 'antd';
+import { CalendarOutlined, EnvironmentOutlined, QrcodeOutlined, SearchOutlined, FilterOutlined, CloseCircleOutlined, DownloadOutlined, TagOutlined, LockOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { usersApi, testPaymentsApi } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventImageUrl } from '../utils/imageUtils';
-import logo from '../assets/VibraTicketLogo2.png';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 export default function MisEntradas() {
   const { user, isAuthenticated } = useAuth();
@@ -32,34 +30,50 @@ export default function MisEntradas() {
         setLoading(true);
         setError(null);
         
-        // Usar la ruta de test-payments que tiene los tickets reales
+        // 1. Intentar obtener tickets del endpoint oficial de usuarios
         let ticketsData = [];
         try {
-          const response = await testPaymentsApi.getMyTickets();
-          // La respuesta viene en formato: { success: true, data: { tickets: [...], count: X } }
-          if (response?.data?.tickets) {
-            ticketsData = response.data.tickets;
-          } else if (response?.tickets) {
+          const response = await usersApi.getMyTickets();
+          if (response?.tickets) {
             ticketsData = response.tickets;
           } else if (Array.isArray(response)) {
             ticketsData = response;
+          } else if (response?.data) {
+            ticketsData = response.data;
           }
-          
-          } catch (ticketsError) {
-          console.error('❌ Error al obtener tickets de test-payments:', ticketsError);
-          // Fallback: obtener órdenes y extraer tickets
+        } catch (usersError) {
+          console.error('⚠️ Error al obtener tickets de usersApi:', usersError);
+        }
+
+        // 2. Si no hay tickets, intentar obtener órdenes y extraer tickets (Fallback)
+        if (ticketsData.length === 0) {
           try {
             const ordersResponse = await usersApi.getMyOrders();
             const orders = Array.isArray(ordersResponse) ? ordersResponse : (ordersResponse?.orders || ordersResponse?.data?.orders || []);
             
-            // Extraer tickets de cada orden
             for (const order of orders) {
               if (order.tickets && Array.isArray(order.tickets)) {
                 ticketsData = [...ticketsData, ...order.tickets];
               }
             }
           } catch (ordersError) {
-            console.error('❌ Error al obtener órdenes:', ordersError);
+            console.error('⚠️ Error al obtener órdenes:', ordersError);
+          }
+        }
+
+        // 3. Último recurso: testPaymentsApi (solo si sigue vacío)
+        if (ticketsData.length === 0) {
+          try {
+            const response = await testPaymentsApi.getMyTickets();
+            if (response?.data?.tickets) {
+              ticketsData = response.data.tickets;
+            } else if (response?.tickets) {
+              ticketsData = response.tickets;
+            } else if (Array.isArray(response)) {
+              ticketsData = response;
+            }
+          } catch (testError) {
+            console.warn('⚠️ Error en testPaymentsApi:', testError);
           }
         }
 
@@ -98,17 +112,15 @@ export default function MisEntradas() {
     return true;
   });
 
-  // Función para obtener color del estado
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ISSUED': return 'green';
-      case 'REDEEMED': return 'blue';
-      case 'CANCELLED': return 'red';
-      default: return 'default';
+      case 'ISSUED': return '#52c41a';
+      case 'REDEEMED': return '#1890ff';
+      case 'CANCELLED': return '#ff4d4f';
+      default: return '#d9d9d9';
     }
   };
 
-  // Función para obtener texto del estado
   const getStatusText = (status) => {
     switch (status) {
       case 'ISSUED': return 'Activo';
@@ -119,340 +131,300 @@ export default function MisEntradas() {
   };
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      {/* Banner Hero */}
+    <div className="fade-in" style={{ minHeight: '100vh', background: '#f8f9fa', paddingBottom: 60 }}>
+      {/* Header Simple */}
       <div style={{ 
-        position: 'relative',
-        height: 600,
-        background: `url(https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=2000&q=80)`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        display: 'flex',
-        alignItems: 'flex-end'
+        background: 'white', 
+        padding: '32px 24px', 
+        borderBottom: '1px solid #eaeaea',
+        marginBottom: 32
       }}>
-        <div style={{ 
-          padding: '40px 24px',
-          color: 'white',
-          maxWidth: 1400,
-          margin: '0 auto',
-          width: '100%'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-            <img 
-              src={logo} 
-              alt="VibraTicket" 
-              style={{ 
-                height: 60, 
-                width: 'auto',
-                filter: 'brightness(0) invert(1) drop-shadow(2px 2px 8px rgba(0,0,0,0.7))'
-              }} 
-            />
-            <Title 
-              level={1} 
-              style={{ 
-                color: 'white', 
-                fontSize: '3rem', 
-                margin: 0,
-                textShadow: '2px 2px 8px rgba(0,0,0,0.7)'
-              }}
-            >
-              Mis Entradas
-            </Title>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <Title level={2} style={{ margin: 0, color: '#1f1f1f' }}>Mis Entradas</Title>
+              <Text type="secondary">Gestioná tus próximos eventos</Text>
+            </div>
+            
+            {/* Filtros Compactos */}
+            <Space>
+              <Input
+                placeholder="Buscar..."
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: 200, borderRadius: 8 }}
+                allowClear
+              />
+              <Button 
+                icon={<FilterOutlined />} 
+                onClick={() => setFilter(filter === 'all' ? 'issued' : 'all')}
+                type={filter !== 'all' ? 'primary' : 'default'}
+                style={{ borderRadius: 8 }}
+              >
+                {filter === 'all' ? 'Todos' : 'Activos'}
+              </Button>
+            </Space>
           </div>
-          <Text style={{ 
-            color: 'white', 
-            fontSize: '1.3rem',
-            textShadow: '1px 1px 4px rgba(0,0,0,0.7)'
-          }}>
-            Administrá todas tus entradas en un solo lugar
-          </Text>
         </div>
       </div>
 
-      {/* Contenido Principal */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        minHeight: 'calc(100vh - 600px)',
-        padding: '40px 24px'
-      }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            {/* Estadísticas */}
-            {!loading && (
-              <Space size="large" style={{ marginTop: 16 }}>
-                <Text strong style={{ color: 'white' }}>
-                  Total: <Tag color="blue">{tickets.length}</Tag>
-                </Text>
-                <Text strong style={{ color: 'white' }}>
-                  Activos: <Tag color="green">{tickets.filter(t => t.status === 'ISSUED').length}</Tag>
-                </Text>
-                <Text strong style={{ color: 'white' }}>
-                  Usados: <Tag color="blue">{tickets.filter(t => t.status === 'REDEEMED').length}</Tag>
-                </Text>
-              </Space>
-            )}
-            
-            {/* Filtros */}
-            <Row gutter={16} justify="center" style={{ marginTop: 24 }}>
-              <Col>
-                <Input
-                  placeholder="Buscar eventos..."
-                  prefix={<SearchOutlined />}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ width: 250, borderRadius: 8 }}
-                  allowClear
-                />
-              </Col>
-              <Col>
-                <Select
-                  value={filter}
-                  style={{ width: 180 }}
-                  onChange={setFilter}
-                  suffixIcon={<FilterOutlined />}
-                >
-                  <Option value="all">Todos los tickets</Option>
-                  <Option value="issued">Activos</Option>
-                  <Option value="redeemed">Usados</Option>
-                  <Option value="cancelled">Cancelados</Option>
-                </Select>
-              </Col>
-            </Row>
-          </div>
-
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px' }}>
         {/* Loading State */}
         {loading && (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <Spin size="large" />
-            <div style={{ marginTop: 16 }}>
-              <Text style={{ color: 'white', fontSize: '1rem' }}>Cargando tus entradas...</Text>
-            </div>
+            <div style={{ marginTop: 16, color: '#666' }}>Cargando tus entradas...</div>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
           <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px' }}>
-            <CloseCircleOutlined style={{ fontSize: 64, color: '#ff4d4f', marginBottom: 16 }} />
+            <CloseCircleOutlined style={{ fontSize: 48, color: '#ff4d4f', marginBottom: 16 }} />
             <Title level={4}>Error al cargar entradas</Title>
             <Text type="secondary">{error}</Text>
             <div style={{ marginTop: 24 }}>
-              <Button type="primary" onClick={() => window.location.reload()}>
-                Reintentar
-              </Button>
+              <Button type="primary" onClick={() => window.location.reload()}>Reintentar</Button>
             </div>
           </Card>
         )}
 
-        {/* Not Authenticated */}
-        {!isAuthenticated && !loading && (
-          <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px' }}>
-            <Title level={4}>🔒 Debes iniciar sesión</Title>
-            <Text type="secondary">Inicia sesión para ver tus entradas</Text>
-            <div style={{ marginTop: 24 }}>
-              <Link to="/login">
-                <Button type="primary" size="large">
-                  Iniciar Sesión
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        )}
+        {/* Empty State - Vibrant & Modern */}
+        {!loading && !error && isAuthenticated && filteredTickets.length === 0 && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '80px 24px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 24,
+            color: 'white',
+            boxShadow: '0 20px 40px rgba(118, 75, 162, 0.2)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Decorative circles */}
+            <div style={{
+              position: 'absolute', top: -50, left: -50, width: 200, height: 200,
+              background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+            }} />
+            <div style={{
+              position: 'absolute', bottom: -30, right: -30, width: 150, height: 150,
+              background: 'rgba(255,255,255,0.1)', borderRadius: '50%'
+            }} />
 
-        {/* Empty State */}
-        {!loading && !error && isAuthenticated && filteredTickets.length === 0 && tickets.length === 0 && (
-          <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px' }}>
-            <Empty
-              description={
-                <span>
-                  <Title level={4}>No tenés entradas aún</Title>
-                  <Text type="secondary">Comprá tu primera entrada para empezar</Text>
-                </span>
-              }
-            />
-            <div style={{ marginTop: 24 }}>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ 
+                background: 'rgba(255, 255, 255, 0.2)', 
+                width: 80, height: 80, 
+                borderRadius: '50%', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 24px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <TagOutlined style={{ fontSize: 40, color: 'white' }} />
+              </div>
+              
+              <Title level={3} style={{ color: 'white', margin: '0 0 16px' }}>
+                {filter !== 'all' ? 'No hay entradas con este filtro' : 'Aún no tenés entradas'}
+              </Title>
+              
+              <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16, display: 'block', marginBottom: 32, maxWidth: 400, margin: '0 auto 32px' }}>
+                {filter !== 'all' 
+                  ? 'Probá cambiando los filtros para ver tus otras entradas.' 
+                  : '¡Es hora de vivir nuevas experiencias! Explorá los mejores eventos y asegurá tu lugar.'}
+              </Text>
+
               <Link to="/">
-                <Button type="primary" size="large">
+                <Button 
+                  size="large" 
+                  style={{ 
+                    height: 50,
+                    padding: '0 32px',
+                    borderRadius: 25,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    border: 'none',
+                    background: 'white',
+                    color: '#764ba2',
+                    boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                  }}
+                >
                   Explorar Eventos
                 </Button>
               </Link>
             </div>
-          </Card>
+          </div>
         )}
 
-        {/* No Results State */}
-        {!loading && !error && isAuthenticated && filteredTickets.length === 0 && tickets.length > 0 && (
-          <Card style={{ borderRadius: 16, textAlign: 'center', padding: '40px' }}>
-            <Empty
-              description={
-                <span>
-                  <Title level={4}>No se encontraron resultados</Title>
-                  <Text type="secondary">Intentá con otros filtros</Text>
-                </span>
-              }
-            />
-            <div style={{ marginTop: 24 }}>
-              <Button onClick={() => { setFilter('all'); setSearchTerm(''); }}>
-                Limpiar Filtros
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Lista de Tickets */}
+        {/* Ticket List - Cards Modernas */}
         {!loading && !error && isAuthenticated && filteredTickets.length > 0 && (
-          <Row gutter={[24, 24]}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {filteredTickets.map((ticket) => {
               const eventName = ticket.event_name || ticket.eventName || 'Evento';
               const venue = ticket.venue || 'Venue';
               const showDate = ticket.show_date || ticket.showDate;
               const sector = ticket.sector || 'General';
               const seatNumber = ticket.seat_number || ticket.seatNumber || '';
-              const qrCode = ticket.qr_code || ticket.qrCode;
               const status = ticket.status || 'ISSUED';
               
-              // Obtener URL de imagen con fallbacks y placeholder
+              // Imagen
               let imageUrl;
               if (ticket.event && typeof ticket.event === 'object') {
-                // Si ticket.event es un objeto, usar getEventImageUrl
                 imageUrl = getEventImageUrl(ticket.event, 'horizontal');
               } else if (ticket.event_image_url || ticket.eventImageUrl) {
-                // Si hay URL de imagen directa del ticket
                 const imgUrl = ticket.event_image_url || ticket.eventImageUrl;
                 imageUrl = imgUrl.startsWith('http') ? imgUrl : `${import.meta.env.VITE_API_URL || 'https://vibratickets.online'}${imgUrl}`;
               } else {
-                // Placeholder por defecto
                 imageUrl = `https://via.placeholder.com/400x200/667eea/ffffff?text=${encodeURIComponent(eventName)}`;
               }
 
               return (
-                <Col xs={24} sm={12} lg={8} xl={6} key={ticket.id}>
-                  <Card
-                    hoverable
-                    cover={
-                      <div style={{ position: 'relative', overflow: 'hidden' }}>
-                        <img
-                          src={imageUrl}
-                          alt={eventName}
-                          style={{
-                            width: '100%',
-                            height: 160,
-                            objectFit: 'cover'
-                          }}
-                          onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=300&h=200&fit=crop';
-                          }}
-                        />
-                        {/* Badge de Estado */}
-                        <Tag 
-                          color={getStatusColor(status)}
-                          style={{
-                            position: 'absolute',
-                            top: 12,
-                            right: 12,
-                            fontWeight: 'bold',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          {status === 'ISSUED' && <CheckCircleOutlined />}
-                          {status === 'REDEEMED' && <CheckCircleOutlined />}
-                          {status === 'CANCELLED' && <CloseCircleOutlined />}
-                          {' '}{getStatusText(status)}
-                        </Tag>
-                        
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-                          color: 'white',
-                          padding: '20px 16px 12px'
-                        }}>
-                          <Text strong style={{ color: 'white', fontSize: '0.9rem', display: 'block' }}>
-                            {eventName}
-                          </Text>
-                        </div>
-                      </div>
-                    }
-                    style={{
-                      borderRadius: 16,
-                      overflow: 'hidden',
-                      background: 'white',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
-                    }}
-                  >
-                    <div style={{ padding: '8px 0' }}>
-                      {/* Fecha */}
-                      {showDate && (
-                        <Space style={{ marginBottom: 8, width: '100%' }}>
-                          <CalendarOutlined style={{ color: '#1890ff' }} />
-                          <Text style={{ fontSize: '0.85rem', color: '#666' }}>
-                            {format(new Date(showDate), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                          </Text>
-                        </Space>
-                      )}
-                      
-                      {/* Venue */}
-                      <Space style={{ marginBottom: 8, width: '100%' }}>
-                        <EnvironmentOutlined style={{ color: '#52c41a' }} />
-                        <Text style={{ fontSize: '0.85rem', color: '#666' }}>
-                          {venue}
+                <div key={ticket.id} className="ticket-card" style={{
+                  display: 'flex',
+                  background: 'white',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  position: 'relative',
+                  border: '1px solid #f0f0f0'
+                }}>
+                  {/* Left: Image (Desktop only or small on mobile) */}
+                  <div style={{ 
+                    width: 180, 
+                    minWidth: 180,
+                    background: `url(${imageUrl}) center/cover no-repeat`,
+                    position: 'relative',
+                    display: window.innerWidth < 576 ? 'none' : 'block' // Hide on very small screens if needed, but better to use CSS media queries
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 12,
+                      left: 12,
+                      background: 'rgba(0,0,0,0.6)',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}>
+                      {sector}
+                    </div>
+                  </div>
+
+                  {/* Middle: Info */}
+                  <div style={{ flex: 1, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <Title level={4} style={{ margin: 0, fontSize: '1.2rem' }}>{eventName}</Title>
+                      <Tag color={getStatusColor(status)} style={{ borderRadius: 12, marginRight: 0 }}>
+                        {getStatusText(status)}
+                      </Tag>
+                    </div>
+                    
+                    <Space direction="vertical" size={4} style={{ marginBottom: 16 }}>
+                      <Space>
+                        <CalendarOutlined style={{ color: '#667eea' }} />
+                        <Text type="secondary">
+                          {showDate ? format(new Date(showDate), "dd 'de' MMMM, yyyy • HH:mm'hs'", { locale: es }) : 'Fecha por confirmar'}
                         </Text>
                       </Space>
-                      
-                      {/* Sector y Asiento */}
-                      <Text strong style={{ fontSize: '0.9rem', display: 'block', marginBottom: 12 }}>
-                        {sector} {seatNumber && `- ${seatNumber}`}
-                      </Text>
-                      
-                      {/* Botones */}
-                      <Space direction="vertical" style={{ width: '100%' }} size="small">
+                      <Space>
+                        <EnvironmentOutlined style={{ color: '#667eea' }} />
+                        <Text type="secondary">{venue}</Text>
+                      </Space>
+                      <Space>
+                        <TagOutlined style={{ color: '#667eea' }} />
+                        <Text strong>{sector} {seatNumber && `• Asiento ${seatNumber}`}</Text>
+                      </Space>
+                    </Space>
+                  </div>
+
+                  {/* Right: Action (Dashed border separator) */}
+                  <div style={{ 
+                    borderLeft: '2px dashed #f0f0f0', 
+                    padding: 24, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minWidth: 160,
+                    background: '#fafafa'
+                  }}>
+                    {ticket.availability_status === 'pending' ? (
+                      <>
+                        <div style={{ 
+                          background: '#f6ffed', 
+                          border: '1px solid #b7eb8f',
+                          borderRadius: '50%',
+                          width: 48, height: 48,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: 12
+                        }}>
+                          <LockOutlined style={{ fontSize: 24, color: '#52c41a' }} />
+                        </div>
+                        <Text strong style={{ color: '#52c41a', fontSize: 13, marginBottom: 8, textAlign: 'center' }}>
+                          Lugar Asegurado
+                        </Text>
                         <Link to={`/ticket/${ticket.ticket_number}`} style={{ width: '100%' }}>
-                          <Button
-                            type="primary"
+                          <Button 
+                            size="middle"
                             block
-                            icon={<QrcodeOutlined />}
-                            disabled={status === 'CANCELLED'}
-                            style={{
-                              background: status === 'CANCELLED' ? '#d9d9d9' :
-                                'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-                              border: 'none',
-                              borderRadius: 8,
-                              fontWeight: 600,
-                              height: 40
-                            }}
+                            style={{ borderRadius: 8 }}
                           >
-                            Ver QR Code
+                            Ver Detalle
                           </Button>
                         </Link>
-                        
-                        {qrCode && status !== 'CANCELLED' && (
-                          <Button
+                      </>
+                    ) : (
+                      <>
+                        <Link to={`/ticket/${ticket.ticket_number}`} style={{ width: '100%' }}>
+                          <Button 
+                            type="primary" 
+                            icon={<QrcodeOutlined />} 
+                            size="large"
                             block
-                            icon={<DownloadOutlined />}
-                            onClick={() => {
-                              // TODO: Implementar descarga de PDF
-                              message.info('Descarga de PDF próximamente');
-                            }}
-                            style={{
-                              borderRadius: 8,
-                              height: 36
+                            disabled={status === 'CANCELLED'}
+                            style={{ 
+                              borderRadius: 8, 
+                              height: 44,
+                              background: status === 'CANCELLED' ? undefined : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              border: 'none'
                             }}
                           >
-                            Descargar PDF
+                            Ver QR
                           </Button>
-                        )}
-                      </Space>
-                    </div>
-                  </Card>
-                </Col>
+                        </Link>
+                        <Text type="secondary" style={{ fontSize: 12, marginTop: 12 }}>
+                          #{ticket.ticket_number?.slice(-6) || '------'}
+                        </Text>
+                      </>
+                    )}
+                  </div>
+                </div>
               );
             })}
-          </Row>
+          </div>
         )}
-        </div>
       </div>
+      
+      {/* CSS para ocultar imagen en móvil si es necesario */}
+      <style>{`
+        @media (max-width: 768px) {
+          .ticket-card {
+            flex-direction: column !important;
+          }
+          .ticket-card > div:first-child {
+            width: 100% !important;
+            height: 120px !important;
+            display: block !important;
+          }
+          .ticket-card > div:last-child {
+            border-left: none !important;
+            border-top: 2px dashed #f0f0f0 !important;
+            padding: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

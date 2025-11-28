@@ -8,7 +8,6 @@ import { useLoginModal } from '../contexts/LoginModalContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventBannerUrl } from '../utils/imageUtils';
-import VenueSeatingChart from '../components/VenueSeatingChart';
 import VirtualQueue from '../components/VirtualQueue';
 
 const { Title, Text } = Typography;
@@ -585,90 +584,78 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
           />
           
           {sections.length > 0 ? (
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              {/* Mapa Visual del Venue */}
-              <VenueSeatingChart
-                sections={sections.map(section => ({
-                  ...section,
-                  available_seats: seats.filter(seat => 
-                    seat.sector === section.name && 
-                    seat.status === 'AVAILABLE'
-                  ).length
-                }))}
-                selectedQuantities={sectionQuantities}
-                onSectionClick={(section) => {
-                  const availableCount = seats.filter(seat => 
-                    seat.sector === section.name && 
-                    seat.status === 'AVAILABLE'
-                  ).length;
-                  
-                  if (availableCount === 0) {
-                    message.warning(`La sección "${section.name}" está agotada`);
-                    return;
-                  }
-                  
-                  const currentQty = sectionQuantities[String(section.id)] || 0;
-                  const newQty = currentQty === 0 ? 1 : 0; // Toggle entre 0 y 1
-                  handleQuantityChange(section.id, newQty);
-                }}
-              />
-              
-              <Divider>Detalle por Sección</Divider>
-              {sections.map(section => (
-                <React.Fragment key={section.id}>
-                  <Row align="middle" justify="space-between">
-                    <Col xs={24} sm={12}>
-                      <Title level={5} style={{ margin: 0 }}>{section.name}</Title>
-                      {(() => {
-                        // Contar asientos disponibles reales de esta sección
-                        const availableCount = seats.filter(seat => 
-                          seat.sector === section.name && 
-                          seat.status === 'AVAILABLE'
-                        ).length;
-                        
-                        return (
-                          <>
-                            <Text type="secondary">Disponibles: {availableCount} de {section.capacity} lugares</Text>
-                            {availableCount < section.capacity && (
-                              <Text type="warning" style={{ display: 'block', fontSize: 12 }}>
-                                {section.capacity - availableCount} vendidos/reservados
+            <Row gutter={[16, 16]}>
+              {sections.map(section => {
+                // Contar asientos disponibles reales de esta sección
+                const availableCount = seats.filter(seat => 
+                  seat.sector === section.name && 
+                  seat.status === 'AVAILABLE'
+                ).length;
+                
+                const isSoldOut = availableCount === 0;
+                const quantity = sectionQuantities[String(section.id)] || 0;
+                
+                return (
+                  <Col xs={24} key={section.id}>
+                    <div style={{ 
+                      background: 'white', 
+                      borderRadius: 16, 
+                      padding: 20,
+                      border: quantity > 0 ? '2px solid #667eea' : '1px solid #f0f0f0',
+                      boxShadow: quantity > 0 ? '0 4px 12px rgba(102, 126, 234, 0.15)' : 'none',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <Row align="middle" justify="space-between" gutter={[16, 16]}>
+                        <Col xs={24} sm={14}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                            <Title level={5} style={{ margin: 0, fontSize: '1.1rem' }}>{section.name}</Title>
+                            {section.kind === 'SEATED' && (
+                              <Tag color="purple" style={{ borderRadius: 12 }}>Numerado</Tag>
+                            )}
+                          </div>
+                          
+                          <Space direction="vertical" size={2}>
+                            <Text type="secondary" style={{ fontSize: '0.9rem' }}>
+                              {isSoldOut ? 'Agotado' : `Disponibles: ${availableCount}`}
+                            </Text>
+                            {availableCount > 0 && availableCount < 20 && (
+                              <Text type="warning" style={{ fontSize: '0.85rem' }}>
+                                ¡Quedan pocos lugares!
                               </Text>
                             )}
-                          </>
-                        );
-                      })()}
-                      <div style={{ marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Tag color={section.kind === 'SEATED' ? 'purple' : 'cyan'}>
-                          {section.kind === 'SEATED' ? '🪑 Numerada' : '🎫 General'}
-                        </Tag>
-                        {section.capacity !== undefined && (
-                          <Tag color={section.capacity > 50 ? 'green' : section.capacity > 0 ? 'orange' : 'red'}>
-                            {section.capacity > 50 ? `✅ ${section.capacity} disponibles` : 
-                             section.capacity > 0 ? `⚠️ Quedan ${section.capacity}` : 
-                             '❌ Agotado'}
-                          </Tag>
-                        )}
-                      </div>
-                    </Col>
-                    <Col xs={24} sm={12} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '24px' }}>
-                      <Text style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                        ${((section.price_cents || section.priceCents || 0) / 100).toLocaleString('es-AR')}
-                      </Text>
-                      <QuantitySelector 
-                        value={sectionQuantities[String(section.id)] || 0}
-                        onChange={(q) => handleQuantityChange(String(section.id), q)}
-                        max={Math.min(
-                          section.capacity || 5, 
-                          5 - (totalTickets - (sectionQuantities[String(section.id)] || 0)) // Respetar límite global de 5
-                        )}
-                        disabled={section.capacity === 0}
-                      />
-                    </Col>
-                  </Row>
-                  <Divider style={{ margin: '8px 0' }} />
-                </React.Fragment>
-              ))}
-            </Space>
+                          </Space>
+                        </Col>
+                        
+                        <Col xs={24} sm={10}>
+                          <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            background: '#f9fafb',
+                            padding: '12px 16px',
+                            borderRadius: 12
+                          }}>
+                            <Text style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#333' }}>
+                              ${((section.price_cents || section.priceCents || 0) / 100).toLocaleString('es-AR')}
+                            </Text>
+                            
+                            <QuantitySelector 
+                              value={quantity}
+                              onChange={(q) => handleQuantityChange(String(section.id), q)}
+                              max={Math.min(
+                                section.capacity || 5, 
+                                5 - (totalTickets - quantity)
+                              )}
+                              disabled={isSoldOut}
+                            />
+                          </div>
+                        </Col>
+                      </Row>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
           ) : (
             <Empty description="No hay secciones disponibles para este show. Contactá al organizador." />
           )}

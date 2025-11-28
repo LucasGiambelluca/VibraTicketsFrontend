@@ -36,12 +36,15 @@ export default function ProtectedRoute({
     return (
       <div style={{
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+        gap: 16
       }}>
-        <Spin size="large" tip="Verificando autenticación..." />
+        <Spin size="large" />
+        <div style={{ color: '#1890ff', fontSize: 16, fontWeight: 500 }}>Verificando autenticación...</div>
       </div>
     );
   }
