@@ -22,7 +22,6 @@ export default function MercadoPagoButton({
   totalAmount,
   discountCode,
   discountAmount,
-  discountAmount,
   onError,
   form, // Ant Design Form instance for validation
   size = 'large',
