@@ -111,13 +111,13 @@ export default function Checkout() {
   const getPayerInfo = () => {
     const formValues = form.getFieldsValue();
     return {
-      name: formValues.name || user?.name?.split(' ')[0] || 'Usuario',
-      surname: formValues.surname || user?.name?.split(' ').slice(1).join(' ') || 'VibraTicket',
+      name: formValues.name || user?.name?.split(' ')[0],
+      surname: formValues.surname || user?.name?.split(' ').slice(1).join(' '),
       email: formValues.email || user?.email,
-      phone: formValues.phone || '1234567890',
-      areaCode: formValues.areaCode || '11',
+      phone: formValues.phone,
+      areaCode: formValues.areaCode,
       idType: formValues.idType || 'DNI',
-      idNumber: formValues.idNumber || '12345678'
+      idNumber: formValues.idNumber
     };
   };
 
@@ -251,6 +251,7 @@ export default function Checkout() {
                     discountCode={appliedDiscount?.code}
                     discountAmount={discountAmount}
                     onError={handlePaymentError}
+                    form={form}
                   />
                 )}
               </Form.Item>

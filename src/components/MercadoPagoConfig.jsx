@@ -173,7 +173,15 @@ const MercadoPagoConfig = () => {
       
     } catch (err) {
       console.error('❌ Error en prueba:', err);
-      setError(err.message || 'Error al probar conexión');
+      
+      let errorMessage = err.message || 'Error al probar conexión';
+      
+      // Fix: Backend sometimes returns "Conexión exitosa" even on 400 error
+      if (errorMessage.includes('exitosa') || errorMessage.includes('success')) {
+        errorMessage = 'Error: La conexión falló aunque el servidor respondió con un mensaje confuso. Verifica los logs del servidor.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setTesting(false);
     }

@@ -22,7 +22,9 @@ export default function MercadoPagoButton({
   totalAmount,
   discountCode,
   discountAmount,
+  discountAmount,
   onError,
+  form, // Ant Design Form instance for validation
   size = 'large',
   block = true 
 }) {
@@ -42,6 +44,17 @@ export default function MercadoPagoButton({
       message.error(error.message);
       if (onError) onError(error);
       return;
+    }
+
+    // Validar formulario si se proporciona
+    if (form) {
+      try {
+        await form.validateFields();
+      } catch (error) {
+        console.error('❌ Error de validación:', error);
+        message.error('Por favor completa todos los campos requeridos.');
+        return;
+      }
     }
 
     if (!payer || !payer.email) {
