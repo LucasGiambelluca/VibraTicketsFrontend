@@ -24,7 +24,8 @@ import {
   Pagination,
   Switch,
   Dropdown,
-  Popconfirm
+  Popconfirm,
+  Grid
 } from 'antd';
 import {
   UserAddOutlined,
@@ -38,7 +39,8 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   UserSwitchOutlined,
-  DownOutlined
+  DownOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import { adminUsersApi } from '../../services/apiService';
 import { useAuth } from '../../hooks/useAuth';
@@ -53,6 +55,9 @@ const AdminUsersPanel = () => {
   const [activeTab, setActiveTab] = useState('2');
   const [loading, setLoading] = useState(false);
   
+  // Responsive breakpoints
+  const screens = Grid.useBreakpoint();
+
   // Estado para crear usuario
   const [createForm] = Form.useForm();
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -457,68 +462,128 @@ const AdminUsersPanel = () => {
     {
       title: 'Acciones',
       key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Ver Detalles">
-            <Button
-              type="primary"
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={() => showUserDetails(record.id)}
-            />
-          </Tooltip>
-          <Tooltip title="Ver Reservas">
-            <Button
-              icon={<ClockCircleOutlined />}
-              size="small"
-              onClick={() => showUserHolds(record)}
-            />
-          </Tooltip>
-          <Dropdown
-            disabled={!isAdmin}
-            menu={{
-              items: [
-                { key: 'ADMIN', label: 'Hacer ADMIN' },
-                { key: 'ORGANIZER', label: 'Hacer ORGANIZER' },
-                { key: 'DOOR', label: 'Hacer DOOR' },
-                { key: 'CUSTOMER', label: 'Hacer CUSTOMER' }
-              ],
-              onClick: ({ key }) => onChangeRole(record.id, key)
-            }}
-          >
-            <Button icon={<UserSwitchOutlined />} size="small" disabled={!isAdmin}>
-              Rol <DownOutlined />
-            </Button>
-          </Dropdown>
-          <Tooltip title="Editar">
-            <Button
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => showEditModal(record)}
-              disabled={!isAdmin}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={`¿Eliminar a ${record.name}?`}
-            description="Esta acción no se puede deshacer. El usuario será marcado como eliminado."
-            okText="Sí, eliminar"
-            okType="danger"
-            cancelText="Cancelar"
-            onConfirm={() => handleDeleteUser(record.id, record.name)}
-            disabled={!isAdmin}
-          >
-            <Tooltip title="Eliminar usuario">
-              <Button danger icon={<DeleteOutlined />} size="small" disabled={!isAdmin} />
+      width: screens.xs ? 60 : 200,
+      render: (_, record) => {
+        const roleChangeItems = [
+          { key: 'ADMIN', label: 'Hacer ADMIN', onClick: () => onChangeRole(record.id, 'ADMIN') },
+          { key: 'ORGANIZER', label: 'Hacer ORGANIZER', onClick: () => onChangeRole(record.id, 'ORGANIZER') },
+          { key: 'DOOR', label: 'Hacer DOOR', onClick: () => onChangeRole(record.id, 'DOOR') },
+          { key: 'CUSTOMER', label: 'Hacer CUSTOMER', onClick: () => onChangeRole(record.id, 'CUSTOMER') }
+        ];
+
+        if (screens.xs) {
+          const items = [
+            {
+              key: 'view',
+              label: 'Ver Detalles',
+              icon: <EyeOutlined />,
+              onClick: () => showUserDetails(record.id)
+            },
+            {
+              key: 'holds',
+              label: 'Ver Reservas',
+              icon: <ClockCircleOutlined />,
+              onClick: () => showUserHolds(record)
+            },
+            {
+              key: 'role',
+              label: 'Cambiar Rol',
+              icon: <UserSwitchOutlined />,
+              disabled: !isAdmin,
+              children: roleChangeItems
+            },
+            {
+              key: 'edit',
+              label: 'Editar',
+              icon: <EditOutlined />,
+              disabled: !isAdmin,
+              onClick: () => showEditModal(record)
+            },
+            {
+              type: 'divider'
+            },
+            {
+              key: 'delete',
+              label: 'Eliminar',
+              icon: <DeleteOutlined />,
+              danger: true,
+              disabled: !isAdmin,
+              onClick: () => {
+                Modal.confirm({
+                  title: `¿Eliminar a ${record.name}?`,
+                  content: "Esta acción no se puede deshacer. El usuario será marcado como eliminado.",
+                  okText: "Sí, eliminar",
+                  okType: "danger",
+                  cancelText: "Cancelar",
+                  onOk: () => handleDeleteUser(record.id, record.name)
+                });
+              }
+            }
+          ];
+          return (
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button icon={<MoreOutlined />} />
+            </Dropdown>
+          );
+        }
+
+        return (
+          <Space>
+            <Tooltip title="Ver Detalles">
+              <Button
+                type="primary"
+                icon={<EyeOutlined />}
+                size="small"
+                onClick={() => showUserDetails(record.id)}
+              />
             </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
+            <Tooltip title="Ver Reservas">
+              <Button
+                icon={<ClockCircleOutlined />}
+                size="small"
+                onClick={() => showUserHolds(record)}
+              />
+            </Tooltip>
+            <Dropdown
+              disabled={!isAdmin}
+              menu={{
+                items: roleChangeItems
+              }}
+            >
+              <Button icon={<UserSwitchOutlined />} size="small" disabled={!isAdmin}>
+                Rol <DownOutlined />
+              </Button>
+            </Dropdown>
+            <Tooltip title="Editar">
+              <Button
+                icon={<EditOutlined />}
+                size="small"
+                onClick={() => showEditModal(record)}
+                disabled={!isAdmin}
+              />
+            </Tooltip>
+            <Popconfirm
+              title={`¿Eliminar a ${record.name}?`}
+              description="Esta acción no se puede deshacer. El usuario será marcado como eliminado."
+              okText="Sí, eliminar"
+              okType="danger"
+              cancelText="Cancelar"
+              onConfirm={() => handleDeleteUser(record.id, record.name)}
+              disabled={!isAdmin}
+            >
+              <Tooltip title="Eliminar usuario">
+                <Button danger icon={<DeleteOutlined />} size="small" disabled={!isAdmin} />
+              </Tooltip>
+            </Popconfirm>
+          </Space>
+        );
+      }
     }
   ];
 
   return (
     <div className="admin-users-panel">
-      <Card title="Gestión de Usuarios" extra={<Badge count={users.length} showZero color="blue" />}>
+      <Card title={<span className="mobile-compact-title">Gestión de Usuarios</span>} extra={<Badge count={users.length} showZero color="blue" />} className="mobile-compact-card">
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           {/* TAB 1: CREAR USUARIO */}
           <TabPane tab={<span><UserAddOutlined /> Crear Usuario</span>} key="1">
@@ -649,9 +714,9 @@ const AdminUsersPanel = () => {
           <TabPane tab={<span><SearchOutlined /> Listar Usuarios</span>} key="2">
             <Space direction="vertical" style={{ width: '100%' }} size="large">
               {/* Filtros */}
-              <Card size="small">
-                <Row gutter={16}>
-                  <Col span={6}>
+              <Card size="small" className="mobile-compact-card">
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={6}>
                     <Select
                       placeholder="Todos los roles"
                       allowClear
@@ -664,7 +729,7 @@ const AdminUsersPanel = () => {
                       <Option value="CUSTOMER">Customer</Option>
                     </Select>
                   </Col>
-                  <Col span={6}>
+                  <Col xs={24} sm={6}>
                     <Select
                       placeholder="Todos los estados"
                       allowClear
@@ -675,7 +740,7 @@ const AdminUsersPanel = () => {
                       <Option value="false">Inactivos</Option>
                     </Select>
                   </Col>
-                  <Col span={10}>
+                  <Col xs={24} sm={10}>
                     <Input
                       placeholder="Buscar por email, nombre o DNI..."
                       prefix={<SearchOutlined />}
@@ -683,11 +748,12 @@ const AdminUsersPanel = () => {
                       onChange={(e) => handleFilterChange('search', e.target.value)}
                     />
                   </Col>
-                  <Col span={2}>
+                  <Col xs={24} sm={2}>
                     <Button
                       icon={<ReloadOutlined />}
                       onClick={loadUsers}
                       loading={loading}
+                      block
                     >
                       Actualizar
                     </Button>
@@ -702,6 +768,8 @@ const AdminUsersPanel = () => {
                 loading={loading}
                 rowKey="id"
                 pagination={false}
+                scroll={{ x: 'max-content' }}
+                size="small"
               />
 
               {/* Paginación */}

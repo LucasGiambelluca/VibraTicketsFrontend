@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, Typography, Row, Col, Button, QRCode, Space, Divider, message, Spin, Alert } from 'antd';
+import { Card, Typography, Row, Col, Button, QRCode, Space, Divider, message, Spin, Alert, Grid, Collapse } from 'antd';
 import { DownloadOutlined, ShareAltOutlined, EnvironmentOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useParams, Link } from 'react-router-dom';
 import { gsap } from 'gsap';
@@ -19,6 +19,7 @@ export default function SmartTicket() {
   const [ticketData, setTicketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const screens = Grid.useBreakpoint();
 
   // Cargar datos del ticket
   useEffect(() => {
@@ -242,12 +243,12 @@ export default function SmartTicket() {
     }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         {/* Header con Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: screens.xs ? 16 : 32 }}>
           <img
             src={logo}
             alt="VibraTicket"
             style={{
-              height: 60,
+              height: screens.xs ? 40 : 60,
               width: 'auto',
               marginBottom: 16,
               filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
@@ -298,7 +299,7 @@ export default function SmartTicket() {
             />
             <Title level={1} style={{ 
               color: 'white', 
-              fontSize: '2.2rem', 
+              fontSize: screens.xs ? '1.5rem' : '2.2rem', 
               fontWeight: 800,
               margin: 0,
               textAlign: 'center',
@@ -523,15 +524,33 @@ export default function SmartTicket() {
           marginTop: 24, 
           borderRadius: 16,
           background: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <Title level={5}>Información Importante</Title>
-          <Space direction="vertical">
-            <Text>• Llegá con tiempo suficiente. Las puertas abren 2 horas antes del show.</Text>
-            <Text>• Presentá este ticket junto con tu DNI en el acceso.</Text>
-            <Text>• No se permite el reingreso al evento.</Text>
-            <Text>• Prohibido el ingreso de bebidas, comidas y elementos punzocortantes.</Text>
-          </Space>
+          backdropFilter: 'blur(10px)',
+          padding: 0
+        }} bodyStyle={{ padding: screens.xs ? '12px' : '24px' }}>
+          {screens.xs ? (
+            <Collapse ghost items={[{
+              key: '1',
+              label: <span style={{ fontWeight: 600 }}>Información Importante</span>,
+              children: (
+                <Space direction="vertical">
+                  <Text>• Llegá con tiempo suficiente. Las puertas abren 2 horas antes del show.</Text>
+                  <Text>• Presentá este ticket junto con tu DNI en el acceso.</Text>
+                  <Text>• No se permite el reingreso al evento.</Text>
+                  <Text>• Prohibido el ingreso de bebidas, comidas y elementos punzocortantes.</Text>
+                </Space>
+              )
+            }]} />
+          ) : (
+            <>
+              <Title level={5}>Información Importante</Title>
+              <Space direction="vertical">
+                <Text>• Llegá con tiempo suficiente. Las puertas abren 2 horas antes del show.</Text>
+                <Text>• Presentá este ticket junto con tu DNI en el acceso.</Text>
+                <Text>• No se permite el reingreso al evento.</Text>
+                <Text>• Prohibido el ingreso de bebidas, comidas y elementos punzocortantes.</Text>
+              </Space>
+            </>
+          )}
         </Card>
       </div>
     </div>

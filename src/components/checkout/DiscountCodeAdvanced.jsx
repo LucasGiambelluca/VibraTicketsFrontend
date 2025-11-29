@@ -294,7 +294,7 @@ const DiscountCodeAdvanced = ({
           loading={loading}
           onClick={() => handleValidate()}
           size="large"
-          disabled={!code.trim()}
+          // disabled={!code.trim()} // Permitir click para mostrar validación
           style={{
             background: 'linear-gradient(135deg, #667eea, #764ba2)',
             border: 'none'

@@ -203,7 +203,7 @@ export default function SeatSelection() {
   }
 
   return (
-    <div className="fade-in" style={{ 
+    <div className="fade-in seat-selection-container" style={{ 
       minHeight: '80vh',
       padding: '20px',
       maxWidth: 600, // Reduced max-width for simpler look
@@ -243,7 +243,7 @@ export default function SeatSelection() {
               ¿Cuántas entradas querés?
             </Text>
             
-            <div style={{ 
+            <div className="seat-selection-quantity" style={{ 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 

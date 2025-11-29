@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, Button, Space, message, Alert, Typography, Row, Col, Tooltip } from 'antd';
+import { Modal, Form, Input, Button, Space, message, Alert, Typography, Row, Col, Tooltip, Grid } from 'antd';
 import { IdcardOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -19,6 +19,7 @@ export default function RegisterModal() {
   const [error, setError] = useState(null);
   const { register } = useAuth();
   const { isRegisterModalVisible, closeRegisterModal, handleRegisterSuccess } = useRegisterModal();
+  const screens = Grid.useBreakpoint();
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -69,14 +70,16 @@ export default function RegisterModal() {
       open={isRegisterModalVisible}
       onCancel={handleCancel}
       footer={null}
-      width={520}
+      width={screens.xs ? '100%' : 520}
       centered
       destroyOnClose
       styles={{
-        body: { padding: '32px 24px' }
+        body: { padding: screens.xs ? '20px 16px' : '32px 24px' }
       }}
       style={{
-        borderRadius: 12
+        maxWidth: '100%',
+        borderRadius: 12,
+        margin: screens.xs ? 10 : undefined
       }}
     >
       {/* Logo y Título */}

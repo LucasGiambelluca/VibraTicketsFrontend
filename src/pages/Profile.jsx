@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, message, Space, Typography, Divider, Avatar, Row, Col, Tabs, Modal, Alert, Tooltip, Badge } from 'antd';
+import { Card, Form, Input, Button, message, Space, Typography, Divider, Avatar, Row, Col, Tabs, Modal, Alert, Tooltip, Badge, Grid } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, LockOutlined, EditOutlined, SaveOutlined, IdcardOutlined, InfoCircleOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../services/apiService';
@@ -16,6 +16,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const screens = Grid.useBreakpoint();
 
   useEffect(() => {
     if (user) {
@@ -139,11 +140,11 @@ export default function Profile() {
             <Row gutter={24} align="middle">
               <Col>
                 <Avatar 
-                  size={80} 
+                  size={screens.xs ? 64 : 80} 
                   icon={<UserOutlined />}
                   style={{ 
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    fontSize: 32
+                    fontSize: screens.xs ? 24 : 32
                   }}
                 />
               </Col>
@@ -162,8 +163,8 @@ export default function Profile() {
           </Card>
 
           {/* Tabs de Contenido */}
-          <Card style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-            <Tabs defaultActiveKey="1" size="large">
+          <Card style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} bodyStyle={{ padding: screens.xs ? '12px' : '24px' }}>
+            <Tabs defaultActiveKey="1" size={screens.xs ? "small" : "large"}>
               
               {/* Tab: Información Personal */}
               <TabPane tab="Información Personal" key="1">

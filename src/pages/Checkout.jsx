@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Typography, Space, Button, Form, Input, Select, Row, Col, Divider, message, Alert, Spin, Steps, Statistic } from 'antd';
+import { Card, Typography, Space, Button, Form, Input, Select, Row, Col, Divider, message, Alert, Spin, Steps, Statistic, Grid, Collapse } from 'antd';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ClockCircleOutlined, ShoppingCartOutlined, TagOutlined, CreditCardOutlined, CheckCircleOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, ShoppingCartOutlined, TagOutlined, CreditCardOutlined, CheckCircleOutlined, LockOutlined, SafetyCertificateOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { holdsApi } from '../services/apiService';
 import MercadoPagoButton from '../components/MercadoPagoButton';
@@ -16,6 +16,8 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
+  const screens = Grid.useBreakpoint();
+  const [summaryOpen, setSummaryOpen] = useState(false);
   
   // Hooks
   const { user } = useAuth();
@@ -128,6 +130,11 @@ export default function Checkout() {
     } else if (error.response?.status === 409 || error.status === 409) {
       message.error('Conflicto con la reserva. Por favor intenta nuevamente.', 4);
       setTimeout(() => navigate(-1), 1500);
+    } else if (error.response?.status === 403 || error.status === 403) {
+      // SaleNotStarted or other forbidden errors
+      const msg = error.response?.data?.message || 'No tienes permiso para realizar esta acción.';
+      message.error(msg, 5);
+      setTimeout(() => navigate('/events'), 2000);
     } else {
       message.error('Error al procesar el pago. Intenta nuevamente.', 4);
     }
@@ -151,13 +158,15 @@ export default function Checkout() {
       <div style={{ marginBottom: '32px' }}>
         <Steps 
           current={2} 
+          labelPlacement={screens.xs ? "vertical" : "horizontal"}
+          size={screens.xs ? "small" : "default"}
           items={[
-            { title: 'Selección', icon: <ShoppingCartOutlined /> },
-            { title: 'Revisión', icon: <CheckCircleOutlined /> },
-            { title: 'Pago', icon: <CreditCardOutlined /> },
+            { title: screens.xs ? null : 'Selección', icon: <ShoppingCartOutlined /> },
+            { title: screens.xs ? null : 'Revisión', icon: <CheckCircleOutlined /> },
+            { title: screens.xs ? null : 'Pago', icon: <CreditCardOutlined /> },
           ]}
           style={{
-            padding: '24px',
+            padding: screens.xs ? '16px' : '24px',
             background: 'rgba(255, 255, 255, 0.6)',
             backdropFilter: 'blur(10px)',
             borderRadius: '16px',
@@ -165,6 +174,55 @@ export default function Checkout() {
           }}
         />
       </div>
+
+      {/* Mobile Order Summary Collapsible */}
+      {screens.xs && (
+        <div style={{ marginBottom: 24 }}>
+          <div 
+            className="glass-card"
+            onClick={() => setSummaryOpen(!summaryOpen)}
+            style={{ 
+              padding: '16px', 
+              borderRadius: 12, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'pointer',
+              background: 'white'
+            }}
+          >
+            <Space>
+              <ShoppingCartOutlined style={{ color: '#667eea' }} />
+              <Text strong>
+                {summaryOpen ? 'Ocultar Resumen' : 'Ver Resumen de Compra'}
+              </Text>
+            </Space>
+            <Space>
+              <Text strong style={{ color: '#52c41a' }}>${total.toLocaleString('es-AR')}</Text>
+              {summaryOpen ? <UpOutlined /> : <DownOutlined />}
+            </Space>
+          </div>
+          
+          {summaryOpen && (
+            <div className="fade-in-up" style={{ marginTop: 12 }}>
+               <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+                <div style={{ padding: '16px' }}>
+                  <OrderSummary 
+                    event={event}
+                    show={show}
+                    seats={holdData?.items || holdData?.seats || []}
+                    holdData={holdData}
+                    subtotal={subtotal}
+                    serviceCharge={serviceCharge}
+                    discountAmount={discountAmount}
+                    total={total}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <Row gutter={[32, 32]}>
         {/* Left Column: Payment Form */}
@@ -272,24 +330,26 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Order Summary */}
-            <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-              <div style={{ padding: '24px', background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                <Title level={4} style={{ margin: 0 }}>Resumen de Compra</Title>
+            {/* Order Summary (Desktop only or if not xs) */}
+            {!screens.xs && (
+              <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+                <div style={{ padding: '24px', background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                  <Title level={4} style={{ margin: 0 }}>Resumen de Compra</Title>
+                </div>
+                <div style={{ padding: '24px' }}>
+                  <OrderSummary 
+                    event={event}
+                    show={show}
+                    seats={holdData?.items || holdData?.seats || []}
+                    holdData={holdData}
+                    subtotal={subtotal}
+                    serviceCharge={serviceCharge}
+                    discountAmount={discountAmount}
+                    total={total}
+                  />
+                </div>
               </div>
-              <div style={{ padding: '24px' }}>
-                <OrderSummary 
-                  event={event}
-                  show={show}
-                  seats={holdData?.items || holdData?.seats || []}
-                  holdData={holdData}
-                  subtotal={subtotal}
-                  serviceCharge={serviceCharge}
-                  discountAmount={discountAmount}
-                  total={total}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Discount Code */}
             <div className="glass-card" style={{ padding: '24px' }}>

@@ -111,13 +111,45 @@ export default function VenueMap({ venue, height = 400, showDirections = true })
 
   if (error) {
     return (
-      <Card style={{ borderRadius: 16 }}>
-        <Alert
-          message="Error al cargar el mapa"
-          description={error}
-          type="warning"
-          showIcon
-        />
+      <Card 
+        style={{ borderRadius: 16, overflow: 'hidden' }}
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ padding: 16, background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <EnvironmentOutlined style={{ fontSize: 20, color: '#667eea' }} />
+              <Title level={4} style={{ margin: 0 }}>Ubicación</Title>
+            </div>
+            <Text type="secondary">{address}</Text>
+          </Space>
+        </div>
+        
+        <div style={{ 
+          height: height, 
+          background: '#f0f2f5', 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: 16,
+          padding: 24,
+          textAlign: 'center'
+        }}>
+          <EnvironmentOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: 4 }}>No se pudo cargar el mapa interactivo</Text>
+            <Text type="secondary">Pero podés ver la ubicación directamente en Google Maps</Text>
+          </div>
+          <Button 
+            type="primary" 
+            icon={<EnvironmentOutlined />}
+            onClick={handleOpenInMaps}
+            style={{ background: '#667eea', border: 'none' }}
+          >
+            Abrir en Google Maps
+          </Button>
+        </div>
       </Card>
     );
   }

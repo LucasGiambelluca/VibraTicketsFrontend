@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Space } from 'antd';
+import { Typography, Space, Grid } from 'antd';
 import HomeBannerCarousel from '../components/HomeBannerCarousel';
 import SearchBar from '../components/SearchEvents';
 import MainEvents from '../components/MainEvents';
@@ -8,6 +8,7 @@ import '../components/HomeBannerCarousel.css';
 const { Title, Text } = Typography;
 
 export default function Home() {
+  const screens = Grid.useBreakpoint();
   return (
     <>
       {/* Fondo Oscuro Premium */}
@@ -34,14 +35,15 @@ export default function Home() {
           zIndex: 1
         }}>
           {/* Barra de Búsqueda */}
+          {/* Barra de Búsqueda */}
           <div style={{ 
             marginBottom: '48px',
             maxWidth: '800px',
-            margin: '-30px auto 48px', // Negative margin to overlap banner slightly
+            margin: screens.xs ? '0 auto 32px' : '-30px auto 48px', // Reset negative margin on mobile
             position: 'relative',
             zIndex: 10
           }}>
-            <div className="glass-card" style={{ padding: '24px', borderRadius: '16px' }}>
+            <div className="glass-card" style={{ padding: screens.xs ? '16px' : '24px', borderRadius: '16px' }}>
               <SearchBar />
             </div>
           </div>
@@ -52,7 +54,7 @@ export default function Home() {
               <Title 
                 level={2} 
                 style={{ 
-                  fontSize: '3rem',
+                  fontSize: screens.xs ? '2rem' : '3rem',
                   fontWeight: 800,
                   marginBottom: 8,
                   background: 'linear-gradient(45deg, #fff, #e0e0e0)',

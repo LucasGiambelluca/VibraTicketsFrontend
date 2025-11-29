@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Button, Table, Space, Form, Input, Modal, Card, Select, DatePicker, Upload, message, Tag, Row, Col, Statistic, Avatar, Spin, Divider } from 'antd';
+import { Layout, Menu, Typography, Button, Table, Space, Form, Input, Modal, Card, Select, DatePicker, Upload, message, Tag, Row, Col, Statistic, Avatar, Spin, Divider, Grid, Dropdown } from 'antd';
 import { 
   DashboardOutlined, 
   CalendarOutlined, 
@@ -19,10 +19,12 @@ import {
   ShoppingCartOutlined,
   TagsOutlined,
   ReloadOutlined,
-  DollarOutlined
+  DollarOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import CreateEvent from '../../components/CreateEvent';
 import CreateVenue from '../../components/CreateVenue';
+import CreateShow from '../../components/CreateShow';
 import VenueMap from '../../components/VenueMap';
 import MercadoPagoConfig from '../../components/MercadoPagoConfig';
 import EventImageUpload from '../../components/EventImageUpload';
@@ -168,9 +170,12 @@ export default function AdminDashboard() {
         collapsible 
         collapsed={collapsed} 
         onCollapse={setCollapsed}
+        breakpoint="lg"
+        collapsedWidth="0"
         style={{
           background: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)',
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          zIndex: 1000
         }}
       >
         <div style={{ 
@@ -225,15 +230,15 @@ export default function AdminDashboard() {
           padding: '0 24px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
         }}>
-          <Title level={4} style={{ margin: 0, textTransform: 'capitalize' }}>
-            {selectedMenu === 'dashboard' ? 'Panel de Control' : selectedMenu}
-          </Title>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Title level={4} style={{ margin: 0, textTransform: 'capitalize', fontSize: '1.1rem' }}>
+              {selectedMenu === 'dashboard' ? 'Panel' : selectedMenu}
+            </Title>
+          </div>
           <Space>
             <Avatar icon={<UserOutlined />} />
-            <Text strong>Administrador</Text>
+            <Text strong style={{ display: window.innerWidth < 768 ? 'none' : 'inline' }}>Admin</Text>
           </Space>
         </Header>
         
@@ -276,6 +281,8 @@ function EventsAdmin() {
     sortBy: 'created_at',
     sortOrder: 'DESC'
   });
+
+  const screens = Grid.useBreakpoint();
 
   // Hook de Google Maps
   const { isLoaded: mapsLoaded } = useGoogleMaps();
@@ -416,9 +423,15 @@ function EventsAdmin() {
         <div>
           <Text strong>{text}</Text>
           <br />
-          <Text type="secondary" style={{ fontSize: '0.85rem' }}>
-            {record.description || 'Sin descripción'}
-          </Text>
+          {record.description ? (
+            <Text type="secondary" style={{ fontSize: '0.85rem' }}>
+              {record.description}
+            </Text>
+          ) : (
+            <Text type="secondary" style={{ fontSize: '0.85rem', fontStyle: 'italic', opacity: 0.5 }}>
+              Sin descripción
+            </Text>
+          )}
         </div>
     ),
     },
@@ -463,62 +476,108 @@ function EventsAdmin() {
     {
       title: 'Acciones',
       key: 'actions',
-      width: 300,
-      render: (_, record) => (
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-          <Space>
-            <Button 
-              icon={<EyeOutlined />} 
-              size="small"
-              onClick={() => handleViewEvent(record)}
-              title="Ver detalles"
-            />
-            <Button 
-              icon={<EditOutlined />} 
-              size="small" 
-              type="primary"
-              onClick={() => handleEditEvent(record)}
-              title="Editar evento"
-            />
-            <Button 
-              icon={<UploadOutlined />} 
-              size="small" 
-              style={{ background: '#52c41a', borderColor: '#52c41a', color: 'white' }}
-              onClick={() => handleManageImages(record)}
-              title="Gestionar imágenes"
-            >
-              📸
-            </Button>
-            <Button 
-              icon={<DeleteOutlined />} 
-              size="small" 
-              danger 
-              onClick={() => handleDeleteEvent(record.id)}
-              title="Eliminar evento"
-            />
+      width: screens.xs ? 60 : 300,
+      render: (_, record) => {
+        if (screens.xs) {
+          const items = [
+            {
+              key: 'view',
+              label: 'Ver detalles',
+              icon: <EyeOutlined />,
+              onClick: () => handleViewEvent(record)
+            },
+            {
+              key: 'edit',
+              label: 'Editar',
+              icon: <EditOutlined />,
+              onClick: () => handleEditEvent(record)
+            },
+            {
+              key: 'images',
+              label: 'Imágenes',
+              icon: <UploadOutlined />,
+              onClick: () => handleManageImages(record)
+            },
+            {
+              key: 'assign',
+              label: 'Asignar Entradas',
+              icon: <PlusOutlined />,
+              onClick: () => handleAssignTickets(record)
+            },
+            {
+              type: 'divider'
+            },
+            {
+              key: 'delete',
+              label: 'Eliminar',
+              icon: <DeleteOutlined />,
+              danger: true,
+              onClick: () => handleDeleteEvent(record.id)
+            }
+          ];
+          return (
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button icon={<MoreOutlined />} />
+            </Dropdown>
+          );
+        }
+
+        return (
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space>
+              <Button 
+                icon={<EyeOutlined />} 
+                size="small"
+                onClick={() => handleViewEvent(record)}
+                title="Ver detalles"
+              />
+              <Button 
+                icon={<EditOutlined />} 
+                size="small" 
+                type="primary"
+                onClick={() => handleEditEvent(record)}
+                title="Editar evento"
+              />
+              <Button 
+                icon={<UploadOutlined />} 
+                size="small" 
+                style={{ background: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+                onClick={() => handleManageImages(record)}
+                title="Gestionar imágenes"
+              >
+                📸
+              </Button>
+              <Button 
+                icon={<DeleteOutlined />} 
+                size="small" 
+                danger 
+                onClick={() => handleDeleteEvent(record.id)}
+                title="Eliminar evento"
+              />
+            </Space>
+            <Space style={{ width: '100%' }}>
+              <Button 
+                size="small" 
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => message.info('Función de crear show en desarrollo')}
+                style={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none'
+                }}
+              >
+                Nuevo Show
+              </Button>
+              <Button 
+                size="small"
+                onClick={() => handleAssignTickets(record)}
+              >
+                Asignar Entradas
+              </Button>
+            </Space>
           </Space>
-          <Space style={{ width: '100%' }}>
-            <Button 
-              size="small" 
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => message.info('Función de crear show en desarrollo')}
-              style={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none'
-              }}
-            >
-              Nuevo Show
-            </Button>
-            <Button 
-              size="small"
-              onClick={() => handleAssignTickets(record)}
-            >
-              Asignar Entradas
-            </Button>
-          </Space>
-        </Space>
-      ),
+        );
+      },
     },
   ];
   
@@ -697,10 +756,10 @@ function EventsAdmin() {
   };
   
   return (
-    <Card>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Title level={4}>Gestión de Eventos</Title>
-        <Space>
+    <Card className="mobile-compact-card">
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <Title level={4} className="mobile-compact-title">Gestión de Eventos</Title>
+        <Space className="mobile-actions-row">
           <Button icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
             Nuevo Evento
           </Button>
@@ -713,6 +772,8 @@ function EventsAdmin() {
         columns={buildColumns()} 
         dataSource={events}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        size="small"
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -1318,6 +1379,7 @@ function EventsAdmin() {
 
 // Shows Admin
 function ShowsAdmin({ venuesHook, mapsLoaded }) {
+  const screens = Grid.useBreakpoint();
   const [shows, setShows] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1343,6 +1405,9 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
   const [editSectionLoading, setEditSectionLoading] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [editSectionForm] = Form.useForm();
+
+  // Estado para crear show
+  const [createShowOpen, setCreateShowOpen] = useState(false);
   
   // Cargar venues para el selector (desde props)
   const { venues, loading: venuesLoading, refetch: refetchVenues } = venuesHook;
@@ -1750,12 +1815,14 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
       dataIndex: 'id', 
       key: 'id', 
       width: 80,
+      responsive: ['md'],
       render: (text) => <Text type="secondary" style={{ fontSize: 12 }}>#{text}</Text>
     },
     { 
       title: 'Imagen', 
       key: 'image',
       width: 100,
+      responsive: ['md'],
       render: (_, record) => {
         // Buscar el evento asociado para obtener la imagen
         const event = events.find(e => e.id === (record.eventId || record.event_id));
@@ -1809,6 +1876,7 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
     { 
       title: 'Venue', 
       key: 'venue',
+      responsive: ['lg'],
       render: (_, record) => {
         if (!record.venue_name) {
           return <Tag color="red">Sin venue</Tag>;
@@ -1832,6 +1900,7 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
       title: 'Disponibles', 
       dataIndex: 'available_seats', 
       key: 'available_seats',
+      responsive: ['lg'],
       render: (seats) => {
         const numSeats = Number(seats) || 0;
         return (
@@ -1849,75 +1918,121 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
     {
       title: 'Acciones',
       key: 'actions',
-      width: 200,
-      render: (_, record) => (
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-          <Space>
-            <Button 
-              icon={<EyeOutlined />} 
-              size="small"
-              onClick={() => handleViewShow(record)}
-              title="Ver detalles"
-            />
-            <Button 
-              icon={<EditOutlined />} 
-              size="small"
-              type="primary"
-              onClick={() => handleEditShow(record)}
-              title="Editar show"
-            />
-            <Button 
-              icon={<DeleteOutlined />} 
-              size="small" 
-              danger 
-              onClick={() => handleDeleteShow(record.id)}
-              title="Eliminar show"
-            />
+      width: screens.xs ? 60 : 200,
+      render: (_, record) => {
+        if (screens.xs) {
+          const items = [
+            {
+              key: 'view',
+              label: 'Ver detalles',
+              icon: <EyeOutlined />,
+              onClick: () => handleViewShow(record)
+            },
+            {
+              key: 'edit',
+              label: 'Editar',
+              icon: <EditOutlined />,
+              onClick: () => handleEditShow(record)
+            },
+            {
+              key: 'venue',
+              label: 'Cambiar Venue',
+              icon: <EnvironmentOutlined />,
+              onClick: () => openEditVenue(record)
+            },
+            {
+              key: 'sections',
+              label: 'Asignar Secciones',
+              icon: <PlusOutlined />,
+              onClick: () => openAssignSections(record)
+            },
+            {
+              type: 'divider'
+            },
+            {
+              key: 'delete',
+              label: 'Eliminar',
+              icon: <DeleteOutlined />,
+              danger: true,
+              onClick: () => handleDeleteShow(record.id)
+            }
+          ];
+          return (
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button icon={<MoreOutlined />} />
+            </Dropdown>
+          );
+        }
+
+        return (
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space>
+              <Button 
+                icon={<EyeOutlined />} 
+                size="small"
+                onClick={() => handleViewShow(record)}
+                title="Ver detalles"
+              />
+              <Button 
+                icon={<EditOutlined />} 
+                size="small"
+                type="primary"
+                onClick={() => handleEditShow(record)}
+                title="Editar show"
+              />
+              <Button 
+                icon={<DeleteOutlined />} 
+                size="small" 
+                danger 
+                onClick={() => handleDeleteShow(record.id)}
+                title="Eliminar show"
+              />
+            </Space>
+            <Space style={{ width: '100%' }}>
+              <Button 
+                icon={<EnvironmentOutlined />} 
+                size="small"
+                onClick={() => openEditVenue(record)}
+                title="Cambiar venue"
+              >
+                Venue
+              </Button>
+              <Button 
+                icon={<PlusOutlined />} 
+                size="small" 
+                type="primary"
+                onClick={() => openAssignSections(record)}
+                title="Asignar secciones"
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none'
+                }}
+              >
+                Secciones
+              </Button>
+            </Space>
           </Space>
-          <Space style={{ width: '100%' }}>
-            <Button 
-              icon={<EnvironmentOutlined />} 
-              size="small"
-              onClick={() => openEditVenue(record)}
-              title="Cambiar venue"
-            >
-              Venue
-            </Button>
-            <Button 
-              icon={<PlusOutlined />} 
-              size="small" 
-              type="primary"
-              onClick={() => openAssignSections(record)}
-              title="Asignar secciones"
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none'
-              }}
-            >
-              Secciones
-            </Button>
-          </Space>
-        </Space>
-      ),
+        );
+      },
     },
   ];
   
   return (
     <div className="fade-in">
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <Title level={2} style={{ margin: 0, color: '#fff' }}>
+          <Title level={2} style={{ margin: 0, color: '#fff' }} className="mobile-compact-title">
             <TeamOutlined style={{ marginRight: 12, color: '#667eea' }} />
             Gestión de Shows
           </Title>
           <Text style={{ color: 'rgba(255,255,255,0.7)' }}>Administra las funciones y fechas de tus eventos</Text>
         </div>
-        <Space>
+        <Space className="mobile-actions-row">
           <Button 
             icon={<PlusOutlined />} 
             type="primary"
             size="large"
-            onClick={() => message.info('Crear shows desde la sección de Eventos')}
+            onClick={() => setCreateShowOpen(true)}
             style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               border: 'none',
@@ -1963,6 +2078,8 @@ function ShowsAdmin({ venuesHook, mapsLoaded }) {
             className: 'glass-pagination'
           }}
           className="glass-table"
+          size="small"
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
@@ -2462,6 +2579,7 @@ function VenuesAdmin() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState(null);
   const [editForm] = Form.useForm();
+  const screens = Grid.useBreakpoint();
   
   // Usar el hook useVenues para obtener datos reales
   const { venues, loading, error, deleteVenue, loadVenues, refetch } = useVenues({
@@ -2501,12 +2619,14 @@ function VenuesAdmin() {
     { 
       title: 'Ciudad', 
       dataIndex: 'city', 
-      key: 'city'
+      key: 'city',
+      responsive: ['lg']
     },
     { 
       title: 'Capacidad', 
       dataIndex: 'max_capacity', 
       key: 'max_capacity',
+      responsive: ['md'],
       render: (capacity) => (
         <Tag color="blue">
           {capacity ? capacity.toLocaleString() : 'N/A'} personas
@@ -2516,6 +2636,7 @@ function VenuesAdmin() {
     { 
       title: 'Contacto', 
       key: 'contact',
+      responsive: ['lg'],
       render: (_, record) => (
         <div>
           {record.phone && (
@@ -2536,27 +2657,62 @@ function VenuesAdmin() {
     {
       title: 'Acciones',
       key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Button 
-            icon={<EyeOutlined />} 
-            size="small"
-            onClick={() => handleViewVenue(record)}
-          />
-          <Button 
-            icon={<EditOutlined />} 
-            size="small" 
-            type="primary"
-            onClick={() => handleEditVenue(record)}
-          />
-          <Button 
-            icon={<DeleteOutlined />} 
-            size="small" 
-            danger 
-            onClick={() => handleDeleteVenue(record.id)}
-          />
-        </Space>
-      ),
+      width: screens.xs ? 60 : undefined,
+      render: (_, record) => {
+        if (screens.xs) {
+          const items = [
+            {
+              key: 'view',
+              label: 'Ver detalles',
+              icon: <EyeOutlined />,
+              onClick: () => handleViewVenue(record)
+            },
+            {
+              key: 'edit',
+              label: 'Editar',
+              icon: <EditOutlined />,
+              onClick: () => handleEditVenue(record)
+            },
+            {
+              type: 'divider'
+            },
+            {
+              key: 'delete',
+              label: 'Eliminar',
+              icon: <DeleteOutlined />,
+              danger: true,
+              onClick: () => handleDeleteVenue(record.id)
+            }
+          ];
+          return (
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button icon={<MoreOutlined />} />
+            </Dropdown>
+          );
+        }
+
+        return (
+          <Space>
+            <Button 
+              icon={<EyeOutlined />} 
+              size="small"
+              onClick={() => handleViewVenue(record)}
+            />
+            <Button 
+              icon={<EditOutlined />} 
+              size="small" 
+              type="primary"
+              onClick={() => handleEditVenue(record)}
+            />
+            <Button 
+              icon={<DeleteOutlined />} 
+              size="small" 
+              danger 
+              onClick={() => handleDeleteVenue(record.id)}
+            />
+          </Space>
+        );
+      },
     },
   ];
 
@@ -2619,10 +2775,10 @@ function VenuesAdmin() {
   };
 
   return (
-    <Card>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Title level={4}>Gestión de Venues</Title>
-        <Space>
+    <Card className="mobile-compact-card">
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <Title level={4} className="mobile-compact-title">Gestión de Venues</Title>
+        <Space className="mobile-actions-row">
           <Button icon={<PlusOutlined />} type="primary" onClick={() => setOpen(true)}>
             Nuevo Venue
           </Button>
@@ -2669,6 +2825,8 @@ function VenuesAdmin() {
         columns={columns} 
         dataSource={venues}
         loading={loading}
+        size="small"
+        scroll={{ x: 'max-content' }}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,

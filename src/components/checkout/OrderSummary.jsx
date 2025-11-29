@@ -112,8 +112,8 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
               renderItem={(seat) => {
                 const price = seat.price || seat.price_cents || 0;
                 const priceDisplay = typeof price === 'number' 
-                  ? (price > 100000 ? price / 100 : price).toFixed(2) // Heuristic: if > 100,000 it's likely cents (e.g. $1000.00 = 100000 cents)
-                  : '0.00';
+                  ? (price > 100000 ? price / 100 : price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : '0,00';
 
                 return (
                   <List.Item
@@ -159,8 +159,8 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
             <Col>
               <Text strong style={{ fontSize: '15px' }}>
                 ${subtotal ? 
-                  (typeof subtotal === 'number' ? subtotal.toFixed(2) : '0.00') 
-                  : '0.00'}
+                  (typeof subtotal === 'number' ? subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00') 
+                  : '0,00'}
               </Text>
             </Col>
           </Row>
@@ -176,8 +176,8 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
             <Col>
               <Text strong style={{ fontSize: '15px' }}>
                 ${serviceCharge ? 
-                  (typeof serviceCharge === 'number' ? serviceCharge.toFixed(2) : '0.00') 
-                  : '0.00'}
+                  (typeof serviceCharge === 'number' ? serviceCharge.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00') 
+                  : '0,00'}
               </Text>
             </Col>
           </Row>
@@ -191,8 +191,8 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
               <Col>
                 <Text strong style={{ fontSize: '15px', color: '#52c41a' }}>
                   -${discountAmount ? 
-                    (typeof discountAmount === 'number' ? discountAmount.toFixed(2) : '0.00') 
-                    : '0.00'}
+                    (typeof discountAmount === 'number' ? discountAmount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00') 
+                    : '0,00'}
                 </Text>
               </Col>
             </Row>
@@ -208,8 +208,8 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
             <Col>
               <Title level={3} style={{ margin: 0, color: '#667eea' }}>
                 ${total ? 
-                  (typeof total === 'number' ? total.toFixed(2) : '0.00') 
-                  : '0.00'}
+                  (typeof total === 'number' ? total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00') 
+                  : '0,00'}
               </Title>
             </Col>
           </Row>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, Button, Space, message, Alert, Divider, Typography } from 'antd';
+import { Modal, Form, Input, Button, Space, message, Alert, Divider, Typography, Grid } from 'antd';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLoginModal } from '../contexts/LoginModalContext';
@@ -19,6 +19,7 @@ export default function LoginModal() {
   const [error, setError] = useState(null);
   const { login } = useAuth();
   const { isLoginModalVisible, closeLoginModal, handleLoginSuccess } = useLoginModal();
+  const screens = Grid.useBreakpoint();
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -85,14 +86,16 @@ export default function LoginModal() {
       open={isLoginModalVisible}
       onCancel={handleCancel}
       footer={null}
-      width={440}
+      width={screens.xs ? '100%' : 440}
       centered
       destroyOnClose
       styles={{
-        body: { padding: '32px 24px' }
+        body: { padding: screens.xs ? '20px 16px' : '32px 24px' }
       }}
       style={{
-        borderRadius: 12
+        maxWidth: '100%',
+        borderRadius: 12,
+        margin: screens.xs ? 10 : undefined
       }}
     >
       {/* Logo y Título */}

@@ -134,6 +134,16 @@ const CreateEvent = ({ onEventCreated }) => {
       submitData.append('startsAt', startDateTime.toISOString());
       submitData.append('endsAt', endDateTime.toISOString());
       
+      // Fecha de inicio de venta (opcional)
+      if (formData.sale_start_date) {
+        // datetime-local ya viene en formato ISO-like (YYYY-MM-DDTHH:mm), pero aseguramos ISO completo
+        const saleStartDate = new Date(formData.sale_start_date);
+        if (!isNaN(saleStartDate.getTime())) {
+          submitData.append('sale_start_date', saleStartDate.toISOString());
+          console.log('📅 Inicio de venta programado:', saleStartDate.toISOString());
+        }
+      }
+      
       console.log('📅 Fechas configuradas:', {
         startsAt: startDateTime.toISOString(),
         endsAt: endDateTime.toISOString()
@@ -551,6 +561,23 @@ Error técnico: ${errorMessage}`;
             />
           </div>
         </div>
+      </div>
+
+      <div style={formGroupStyle}>
+        <label htmlFor="sale_start_date" style={labelStyle}>
+          Inicio de Venta (Opcional)
+          <span style={{ fontWeight: 'normal', color: '#666', fontSize: '14px', marginLeft: '8px' }}>
+            Si se deja vacío, la venta comienza inmediatamente.
+          </span>
+        </label>
+        <input
+          type="datetime-local"
+          id="sale_start_date"
+          name="sale_start_date"
+          value={formData.sale_start_date || ''}
+          onChange={handleInputChange}
+          style={inputStyle}
+        />
       </div>
 
       <div style={formGroupStyle}>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, message } from 'antd';
+import React, { useState } from 'react';
+import { Layout, Menu, Button, Avatar, Dropdown, message, Drawer, Grid, Space, Divider } from 'antd';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -11,7 +11,9 @@ import {
   LoginOutlined,
   UserAddOutlined,
   ShoppingCartOutlined,
-  TeamOutlined
+  TeamOutlined,
+  MenuOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { useLoginModal } from '../contexts/LoginModalContext';
@@ -26,11 +28,21 @@ export default function HeaderNav() {
   const { user, isAuthenticated, logout, isAdmin, isOrganizer } = useAuth();
   const { openLoginModal } = useLoginModal();
   const { openRegisterModal } = useRegisterModal();
+  
+  // Responsive
+  const screens = Grid.useBreakpoint();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     message.success('¡Hasta pronto!');
     navigate('/');
+    setMobileMenuOpen(false);
+  };
+
+  const handleMobileMenuClick = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
   };
 
   // Menú del usuario autenticado
@@ -160,81 +172,210 @@ export default function HeaderNav() {
         </Link>
       </div>
 
-      {/* Menú de navegación */}
-      <Menu
-        theme="dark"
-        mode="horizontal"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          background: 'transparent',
-          border: 'none',
-          marginLeft: 24
-        }}
-      />
+      {/* Menú de navegación Desktop */}
+      {screens.md ? (
+        <Menu
+          theme="dark"
+          mode="horizontal"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: 'transparent',
+            border: 'none',
+            marginLeft: 24
+          }}
+        />
+      ) : null}
 
-      {/* Botones de usuario */}
+      {/* Botones de usuario / Hamburger Mobile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {isAuthenticated ? (
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            placement="bottomRight"
-            trigger={['click']}
-          >
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              cursor: 'pointer',
-              padding: '4px 12px',
-              borderRadius: 20,
-              background: 'rgba(255,255,255,0.1)',
-              transition: 'all 0.3s'
-            }}>
-              <Avatar
-                size="small"
-                icon={<UserOutlined />}
+        {screens.md ? (
+          // Desktop User Actions
+          isAuthenticated ? (
+            <Dropdown
+              menu={{ items: userMenuItems }}
+              placement="bottomRight"
+              trigger={['click']}
+            >
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 20,
+                background: 'rgba(255,255,255,0.1)',
+                transition: 'all 0.3s'
+              }}>
+                <Avatar
+                  size="small"
+                  icon={<UserOutlined />}
+                  style={{
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                  }}
+                />
+                <span style={{ color: 'white', fontSize: 14 }}>
+                  {user?.name || user?.email?.split('@')[0] || 'Usuario'}
+                </span>
+              </div>
+            </Dropdown>
+          ) : (
+            <>
+              <Button
+                type="default"
+                icon={<LoginOutlined />}
+                onClick={() => openLoginModal()}
                 style={{
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                  borderColor: 'white',
+                  color: 'white',
+                  background: 'transparent'
                 }}
-              />
-              <span style={{ color: 'white', fontSize: 14 }}>
-                {user?.name || user?.email?.split('@')[0] || 'Usuario'}
-              </span>
-            </div>
-          </Dropdown>
+              >
+                Ingresar
+              </Button>
+              <Button
+                type="primary"
+                icon={<UserAddOutlined />}
+                onClick={() => openRegisterModal()}
+                style={{
+                  background: 'white',
+                  color: '#764ba2',
+                  border: 'none',
+                  fontWeight: 600
+                }}
+              >
+                Registrarse
+              </Button>
+            </>
+          )
         ) : (
-          <>
-            <Button
-              type="default"
-              icon={<LoginOutlined />}
-              onClick={() => openLoginModal()}
-              style={{
-                borderColor: 'white',
-                color: 'white',
-                background: 'transparent'
-              }}
-            >
-              Ingresar
-            </Button>
-            <Button
-              type="primary"
-              icon={<UserAddOutlined />}
-              onClick={() => openRegisterModal()}
-              style={{
-                background: 'white',
-                color: '#764ba2',
-                border: 'none',
-                fontWeight: 600
-              }}
-            >
-              Registrarse
-            </Button>
-          </>
+          // Mobile Hamburger
+          <Button 
+            type="text" 
+            icon={<MenuOutlined style={{ fontSize: 24, color: 'white' }} />} 
+            onClick={() => setMobileMenuOpen(true)}
+          />
         )}
       </div>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <img src={logo} alt="VibraTicket" style={{ height: 32 }} />
+            <Button 
+              type="text" 
+              icon={<CloseOutlined />} 
+              onClick={() => setMobileMenuOpen(false)} 
+            />
+          </div>
+        }
+        placement="right"
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+        styles={{ body: { padding: 0 } }}
+        width={300}
+        closeIcon={null}
+      >
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {isAuthenticated && (
+            <div style={{ marginBottom: 24, textAlign: 'center' }}>
+              <Avatar
+                size={64}
+                icon={<UserOutlined />}
+                style={{
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  marginBottom: 12
+                }}
+              />
+              <div style={{ fontSize: 18, fontWeight: 600 }}>
+                {user?.name || user?.email?.split('@')[0] || 'Usuario'}
+              </div>
+              <div style={{ color: '#666' }}>{user?.email}</div>
+            </div>
+          )}
+
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            items={menuItems}
+            onClick={({ key }) => {
+              if (key.startsWith('/')) {
+                handleMobileMenuClick(key);
+              }
+            }}
+            style={{ border: 'none', fontSize: 16 }}
+          />
+
+          <Divider />
+
+          {isAuthenticated ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Button 
+                block 
+                size="large" 
+                icon={<UserOutlined />} 
+                onClick={() => handleMobileMenuClick('/profile')}
+              >
+                Mi Perfil
+              </Button>
+              <Button 
+                block 
+                size="large" 
+                icon={<FileTextOutlined />} 
+                onClick={() => handleMobileMenuClick('/mis-entradas')}
+              >
+                Mis Entradas
+              </Button>
+              <Button 
+                block 
+                size="large" 
+                danger 
+                icon={<LogoutOutlined />} 
+                onClick={handleLogout}
+                style={{ marginTop: 16 }}
+              >
+                Cerrar Sesión
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Button
+                block
+                size="large"
+                type="primary"
+                icon={<LoginOutlined />}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openLoginModal();
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  height: 48,
+                  fontSize: 16
+                }}
+              >
+                Ingresar
+              </Button>
+              <Button
+                block
+                size="large"
+                icon={<UserAddOutlined />}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openRegisterModal();
+                }}
+                style={{ height: 48, fontSize: 16 }}
+              >
+                Registrarse
+              </Button>
+            </div>
+          )}
+        </div>
+      </Drawer>
     </Header>
   );
 }

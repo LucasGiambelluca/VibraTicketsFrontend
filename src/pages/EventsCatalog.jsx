@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Input, Select, DatePicker, Button, Space, Typography, Tag, Empty, Spin, Pagination } from 'antd';
+import { Row, Col, Card, Input, Select, DatePicker, Button, Space, Typography, Tag, Empty, Spin, Pagination, Skeleton } from 'antd';
 import { SearchOutlined, CalendarOutlined, EnvironmentOutlined, FilterOutlined, ClearOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEventsWithShows } from '../hooks/useEventsWithShows';
@@ -97,7 +97,7 @@ export default function EventsCatalog() {
   const categories = ['Música', 'Teatro', 'Deportes', 'Conferencias', 'Festivales'];
 
   return (
-    <div style={{ 
+    <div className="events-catalog-container" style={{ 
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea05 0%, #764ba205 100%)',
       paddingTop: '100px',
@@ -109,7 +109,7 @@ export default function EventsCatalog() {
         
         {/* Header */}
         <div style={{ marginBottom: 40, textAlign: 'center' }}>
-          <Title level={1} style={{
+          <Title level={1} className="events-catalog-title" style={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -125,7 +125,7 @@ export default function EventsCatalog() {
         </div>
 
         {/* Filtros */}
-        <div style={{ 
+        <div className="events-filters-container" style={{ 
           background: 'white',
           borderRadius: 24,
           padding: '32px',
@@ -137,6 +137,7 @@ export default function EventsCatalog() {
             
             {/* Búsqueda Principal */}
             <Input
+              className="events-search-input"
               size="large"
               placeholder="Buscar eventos por nombre..."
               value={filters.search}
@@ -253,12 +254,24 @@ export default function EventsCatalog() {
 
         {/* Grid de Eventos */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <Spin size="large" />
-            <div style={{ marginTop: 16 }}>
-              <Text>Cargando eventos...</Text>
-            </div>
-          </div>
+          <Row gutter={[24, 24]}>
+            {[...Array(8)].map((_, i) => (
+              <Col xs={24} sm={12} lg={8} xl={6} key={i}>
+                <Card 
+                  bordered={false}
+                  style={{ borderRadius: 12, overflow: 'hidden', boxShadow: 'none' }} 
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <div style={{ height: 200, background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Skeleton.Image active style={{ transform: 'scale(1.5)' }} />
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <Skeleton active title={false} paragraph={{ rows: 2, width: ['90%', '60%'] }} />
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
         ) : events.length === 0 ? (
           <Empty
             description="No se encontraron eventos"

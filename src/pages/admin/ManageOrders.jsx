@@ -384,7 +384,7 @@ export default function ManageOrders() {
                 />
               )
             }}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 'max-content' }}
           />
         </Card>
       </Space>

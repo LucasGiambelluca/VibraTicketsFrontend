@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Table, Button, Badge, Modal, 
   message, Space, Tag, Tooltip, Card,
-  Typography, Row, Col, Statistic, Input
+  Typography, Row, Col, Statistic, Input, Grid, Descriptions, Divider
 } from 'antd';
 import { 
   PlusOutlined, EditOutlined, 
@@ -10,7 +10,8 @@ import {
   TagsOutlined, PercentageOutlined,
   DollarOutlined, CalendarOutlined,
   PauseCircleOutlined, PlayCircleOutlined,
-  SearchOutlined, FilterOutlined, CheckCircleOutlined
+  SearchOutlined, FilterOutlined, CheckCircleOutlined,
+  DownOutlined, UpOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
 import DiscountCodeForm from '../../components/admin/DiscountCodeForm';
 import DiscountStatistics from '../../components/admin/DiscountStatistics';
@@ -26,6 +27,7 @@ const DiscountCodesAdmin = () => {
   const [statisticsModalVisible, setStatisticsModalVisible] = useState(false);
   const [selectedCodeId, setSelectedCodeId] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const screens = Grid.useBreakpoint(); // Add Grid breakpoint hook
   const [statistics, setStatistics] = useState({
     totalCodes: 0,
     activeCodes: 0,
@@ -206,7 +208,7 @@ const DiscountCodesAdmin = () => {
       title: 'Uso',
       dataIndex: 'usage_status',
       key: 'usage_status',
-      responsive: ['sm'],
+      responsive: ['lg'], // Hide on mobile/tablet
       render: (_, record) => {
         const usageCount = record.usage_count || 0;
         const limit = record.usage_limit || '∞';
@@ -236,6 +238,7 @@ const DiscountCodesAdmin = () => {
       title: 'Estado',
       dataIndex: 'is_active',
       key: 'is_active',
+      responsive: ['md'], // Hide on mobile
       render: (active, record) => {
         const isExpired = record.valid_until && new Date(record.valid_until) < new Date();
         if (isExpired) return <Badge status="error" text={<span style={{ color: '#ff4d4f' }}>Expirado</span>} />;
@@ -251,6 +254,7 @@ const DiscountCodesAdmin = () => {
       title: 'Acciones',
       key: 'actions',
       align: 'right',
+      responsive: ['md'], // Hide on mobile, actions are in expanded row
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Editar">
@@ -292,6 +296,76 @@ const DiscountCodesAdmin = () => {
       )
     }
   ];
+
+  // Expandable row renderer for mobile/tablet details
+  const expandedRowRender = (record) => {
+    const isExpired = record.valid_until && new Date(record.valid_until) < new Date();
+    const usageCount = record.usage_count || 0;
+    const limit = record.usage_limit || '∞';
+    const percentage = record.usage_limit ? (usageCount / record.usage_limit) * 100 : 0;
+
+    return (
+      <div style={{ padding: '16px', background: '#fafafa', borderRadius: '8px' }}>
+        <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
+          <Descriptions.Item label="Descripción">{record.description || 'Sin descripción'}</Descriptions.Item>
+          <Descriptions.Item label="Estado">
+             {isExpired ? (
+               <Badge status="error" text="Expirado" />
+             ) : (
+               <Badge status={record.is_active ? 'success' : 'warning'} text={record.is_active ? 'Activo' : 'Suspendido'} />
+             )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Uso">
+            <Space direction="vertical" style={{ width: '100%' }} size={0}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span>{usageCount} usados</span>
+                <span>Límite: {limit}</span>
+              </div>
+              <div style={{ height: 6, background: '#e8e8e8', borderRadius: 3, overflow: 'hidden', width: '100%', marginTop: 4 }}>
+                <div style={{ 
+                  height: '100%', 
+                  width: `${Math.min(percentage, 100)}%`,
+                  background: percentage > 90 ? '#ff4d4f' : '#1890ff'
+                }} />
+              </div>
+            </Space>
+          </Descriptions.Item>
+          <Descriptions.Item label="Válido Hasta">
+            {record.valid_until ? new Date(record.valid_until).toLocaleDateString() : 'Indefinido'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Mínimo de Compra">
+            {record.min_purchase_amount ? `$${record.min_purchase_amount}` : 'Sin mínimo'}
+          </Descriptions.Item>
+        </Descriptions>
+        
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+           <Button 
+              icon={<EditOutlined />} 
+              onClick={() => handleEdit(record)}
+              size="small"
+            >
+              Editar
+            </Button>
+            <Button 
+              icon={record.is_active ? <PauseCircleOutlined /> : <PlayCircleOutlined />} 
+              onClick={() => handleToggleStatus(record.id, record.is_active)}
+              size="small"
+              danger={record.is_active}
+              type={record.is_active ? 'default' : 'primary'}
+            >
+              {record.is_active ? 'Suspender' : 'Activar'}
+            </Button>
+            <Button 
+              icon={<BarChartOutlined />} 
+              onClick={() => handleStatistics(record)}
+              size="small"
+            >
+              Estadísticas
+            </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fade-in" style={{ padding: '24px', maxWidth: 1600, margin: '0 auto' }}>
@@ -377,7 +451,19 @@ const DiscountCodesAdmin = () => {
               return originalElement;
             }
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 'max-content' }}
+          expandable={{
+            expandedRowRender,
+            expandRowByClick: true,
+            expandIcon: ({ expanded, onExpand, record }) => (
+              <Button
+                type="text"
+                size="small"
+                icon={expanded ? <UpOutlined /> : <DownOutlined />}
+                onClick={e => onExpand(record, e)}
+              />
+            )
+          }}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty, Alert } from 'antd';
+import { Typography, Card, Button, Space, Row, Col, Tag, Spin, Breadcrumb, Divider, message, Empty, Alert, Skeleton } from 'antd';
 import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, ShoppingCartOutlined, ArrowLeftOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 import { showsApi, eventsApi, holdsApi, queueApi } from '../services/apiService';
@@ -498,7 +498,22 @@ export default function ShowDetail() {
     }
   };
 
-  if (loading) return <div style={{ minHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Spin size="large" /></div>;
+  if (loading) return (
+    <div style={{ background: '#F9FAFB', minHeight: '100vh', paddingBottom: '120px' }}>
+      {/* Hero Skeleton */}
+      <div style={{ height: 250, background: '#e5e7eb', padding: '24px', display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+          <Skeleton active paragraph={{ rows: 1, width: ['30%'] }} title={{ width: '50%' }} />
+        </div>
+      </div>
+      {/* Content Skeleton */}
+      <div style={{ maxWidth: 900, margin: '-60px auto 0', position: 'relative', zIndex: 10, padding: '0 24px' }}>
+        <Card style={{ borderRadius: 16, minHeight: 400 }}>
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </Card>
+      </div>
+    </div>
+  );
   if (error) return <div style={{ padding: 40, textAlign: 'center' }}><Text type="danger">Error: {error}</Text></div>;
   if (!show || !event) return <div style={{ padding: 40, textAlign: 'center' }}><Empty description="No se encontró el show." /></div>;
 
@@ -508,7 +523,7 @@ export default function ShowDetail() {
   return (
     <div style={{ background: '#F9FAFB', paddingBottom: '120px' /* Espacio para el footer fijo */ }}>
       {/* Hero Section */}
-      <div style={{ 
+      <div className="show-detail-hero" style={{ 
         height: 250,
         background: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.4)), url(${
 event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=1200&h=600&fit=crop'
@@ -533,7 +548,7 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: '-60px auto 0', position: 'relative', zIndex: 10, padding: '0 24px' }}>
+      <div className="show-detail-content" style={{ maxWidth: 900, margin: '-60px auto 0', position: 'relative', zIndex: 10, padding: '0 24px' }}>
         
         {/* Mostrar cola si está habilitada y no tiene acceso */}
         {queueEnabled && !hasQueueAccess && (
@@ -646,7 +661,7 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
                                 section.capacity || 5, 
                                 5 - (totalTickets - quantity)
                               )}
-                              disabled={isSoldOut}
+                              disabled={isSoldOut || (event?.sale_start_date && new Date() < new Date(event.sale_start_date))}
                             />
                           </div>
                         </Col>
@@ -664,32 +679,53 @@ event ? getEventBannerUrl(event) : 'https://images.unsplash.com/photo-1540039155
       </div>
 
       {/* Footer Fijo de Compra */}
-      <div style={{
+      <div className="show-detail-footer" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, 
         background: 'white', padding: '16px 24px', 
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)', zIndex: 1000
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <Text style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Total: </Text>
-            <Text style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#4F46E5' }}>
-              ${totalPrice.toLocaleString('es-AR')}
-            </Text>
-            <Text style={{ marginLeft: 16, color: '#6B7280' }}>
-              ({totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'})
-            </Text>
-          </div>
-          <Button 
-            type="primary"
-            size="large"
-            icon={<ShoppingCartOutlined />}
-            onClick={handleContinue}
-            disabled={totalTickets === 0 || creatingHold}
-            loading={creatingHold}
-            style={{ borderRadius: 12, fontWeight: 'bold', background: 'linear-gradient(90deg, #4F46E5, #818CF8)' }}
-          >
-            Continuar
-          </Button>
+          {(() => {
+            const now = new Date();
+            const saleStartDate = event?.sale_start_date ? new Date(event.sale_start_date) : null;
+            const isSaleStarted = !saleStartDate || now >= saleStartDate;
+
+            if (!isSaleStarted) {
+              return (
+                <div style={{ width: '100%', textAlign: 'center' }}>
+                  <Text style={{ fontSize: '1.1rem', color: '#faad14', fontWeight: 'bold' }}>
+                    <ClockCircleOutlined style={{ marginRight: 8 }} />
+                    Venta disponible el {format(saleStartDate, "dd 'de' MMMM 'a las' HH:mm 'hs'", { locale: es })}
+                  </Text>
+                </div>
+              );
+            }
+
+            return (
+              <>
+                <div>
+                  <Text style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Total: </Text>
+                  <Text style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#4F46E5' }}>
+                    ${totalPrice.toLocaleString('es-AR')}
+                  </Text>
+                  <Text style={{ marginLeft: 16, color: '#6B7280' }}>
+                    ({totalTickets} {totalTickets === 1 ? 'entrada' : 'entradas'})
+                  </Text>
+                </div>
+                <Button 
+                  type="primary"
+                  size="large"
+                  icon={<ShoppingCartOutlined />}
+                  onClick={handleContinue}
+                  disabled={totalTickets === 0 || creatingHold}
+                  loading={creatingHold}
+                  style={{ borderRadius: 12, fontWeight: 'bold', background: 'linear-gradient(90deg, #4F46E5, #818CF8)' }}
+                >
+                  Continuar
+                </Button>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
