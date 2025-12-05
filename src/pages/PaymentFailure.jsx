@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Result, Button, Typography, Space, Divider, Alert } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CloseCircleOutlined, HomeOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
+import { XCircle, Home, RotateCcw, TriangleAlert } from 'lucide-react';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -82,8 +82,8 @@ export default function PaymentFailure() {
         <Result
           status={errorDetails?.icon || 'error'}
           icon={status === 'cancelled' ? 
-            <WarningOutlined style={{ color: '#faad14' }} /> : 
-            <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+            <TriangleAlert size={72} style={{ color: '#faad14' }} /> : 
+            <XCircle size={72} style={{ color: '#ff4d4f' }} />
           }
           title={
             <Title level={2} style={{ color: status === 'cancelled' ? '#faad14' : '#ff4d4f' }}>
@@ -95,7 +95,7 @@ export default function PaymentFailure() {
             <Button 
               type="primary" 
               size="large"
-              icon={<ReloadOutlined />}
+              icon={<RotateCcw size={20} />}
               onClick={handleRetry}
               key="retry"
               style={{
@@ -107,7 +107,7 @@ export default function PaymentFailure() {
             </Button>,
             <Button 
               size="large"
-              icon={<HomeOutlined />}
+              icon={<Home size={20} />}
               onClick={() => navigate('/')}
               key="home"
             >

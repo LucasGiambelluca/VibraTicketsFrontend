@@ -2,19 +2,19 @@ import React, { useState } from 'react';
 import { Layout, Menu, Button, Avatar, Dropdown, message, Drawer, Grid, Space, Divider } from 'antd';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  HomeOutlined,
-  CalendarOutlined,
-  FileTextOutlined,
-  DashboardOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  LoginOutlined,
-  UserAddOutlined,
-  ShoppingCartOutlined,
-  TeamOutlined,
-  MenuOutlined,
-  CloseOutlined
-} from '@ant-design/icons';
+  Home,
+  Calendar,
+  FileText,
+  LayoutDashboard,
+  User,
+  LogOut,
+  LogIn,
+  UserPlus,
+  ShoppingCart,
+  Users,
+  Menu as MenuIcon,
+  X
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useLoginModal } from '../contexts/LoginModalContext';
 import { useRegisterModal } from '../contexts/RegisterModalContext';
@@ -32,6 +32,9 @@ export default function HeaderNav() {
   // Responsive
   const screens = Grid.useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Detectar si estamos en ruta admin
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   const handleLogout = () => {
     logout();
@@ -49,27 +52,25 @@ export default function HeaderNav() {
   const userMenuItems = [
     {
       key: 'profile',
-      icon: <UserOutlined />,
+      icon: <User size={16} />,
       label: 'Mi Perfil',
       onClick: () => navigate('/profile')
     },
     {
       key: 'tickets',
-      icon: <FileTextOutlined />,
+      icon: <FileText size={16} />,
       label: 'Mis Entradas',
       onClick: () => navigate('/mis-entradas')
+    },
+    {
+      key: 'orders',
+      icon: <ShoppingCart size={16} />,
+      label: 'Mis Órdenes',
+      onClick: () => navigate('/mis-ordenes')
     }
   ];
 
-  // Agregar opción admin si el usuario es admin u organizador
-  if (isAdmin || isOrganizer) {
-    userMenuItems.push({
-      key: 'admin',
-      icon: <DashboardOutlined />,
-      label: 'Panel Admin',
-      onClick: () => navigate('/admin')
-    });
-  }
+
 
   // Agregar divider y logout
   userMenuItems.push(
@@ -78,7 +79,7 @@ export default function HeaderNav() {
     },
     {
       key: 'logout',
-      icon: <LogoutOutlined />,
+      icon: <LogOut size={16} />,
       label: 'Cerrar Sesión',
       onClick: handleLogout
     }
@@ -88,12 +89,12 @@ export default function HeaderNav() {
   const menuItems = [
     {
       key: '/',
-      icon: <HomeOutlined />,
+      icon: <Home size={16} />,
       label: <Link to="/">Inicio</Link>
     },
     {
       key: '/events',
-      icon: <CalendarOutlined />,
+      icon: <Calendar size={16} />,
       label: <Link to="/events">Eventos</Link>
     }
   ];
@@ -101,59 +102,34 @@ export default function HeaderNav() {
   if (isAuthenticated) {
     menuItems.push({
       key: '/mis-entradas',
-      icon: <FileTextOutlined />,
+      icon: <FileText size={16} />,
       label: <Link to="/mis-entradas">Mis Entradas</Link>
+    }, {
+      key: '/mis-ordenes',
+      icon: <ShoppingCart size={16} />,
+      label: <Link to="/mis-ordenes">Mis Órdenes</Link>
     });
   }
 
-  if (isAdmin || isOrganizer) {
-    const adminSubMenuItems = [
-      {
-        key: '/admin',
-        icon: <DashboardOutlined />,
-        label: <Link to="/admin">Dashboard</Link>
-      },
-      {
-        key: '/admin/orders',
-        icon: <ShoppingCartOutlined />,
-        label: <Link to="/admin/orders">Órdenes</Link>
-      }
-    ];
-    
-    // Solo admins pueden ver usuarios
-    if (isAdmin) {
-      adminSubMenuItems.push({
-        key: '/admin/users',
-        icon: <TeamOutlined />,
-        label: <Link to="/admin/users">Usuarios</Link>
-      });
-    }
-    
-    menuItems.push({
-      key: 'admin',
-      icon: <DashboardOutlined />,
-      label: 'Admin',
-      children: adminSubMenuItems
-    });
-  }
+
+
+  // ===== ESTILOS =====
+  const headerStyle = {
+    position: 'fixed',
+    zIndex: 1000,
+    width: '100%',
+    background: '#FFFFFF',
+    padding: '0 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+    borderBottom: '1px solid var(--border-light)',
+    height: 64
+  };
 
   return (
-    <Header
-      style={{
-        position: 'fixed',
-        zIndex: 1000,
-        width: '100%',
-        background: 'rgba(17, 24, 39, 0.95)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        padding: '0 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(59, 130, 246, 0.3)'
-      }}
-    >
+    <Header style={headerStyle}>
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center' }}>
@@ -172,89 +148,75 @@ export default function HeaderNav() {
         </Link>
       </div>
 
-      {/* Menú de navegación Desktop */}
-      {screens.md ? (
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: 'transparent',
-            border: 'none',
-            marginLeft: 24
-          }}
-        />
-      ) : null}
+      {/* Espaciador */}
+      <div style={{ flex: 1 }} />
 
       {/* Botones de usuario / Hamburger Mobile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {screens.md ? (
           // Desktop User Actions
-          isAuthenticated ? (
-            <Dropdown
-              menu={{ items: userMenuItems }}
-              placement="bottomRight"
-              trigger={['click']}
-            >
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 8, 
-                cursor: 'pointer',
-                padding: '4px 12px',
-                borderRadius: 20,
-                background: 'rgba(255,255,255,0.1)',
-                transition: 'all 0.3s'
-              }}>
-                <Avatar
-                  size="small"
-                  icon={<UserOutlined />}
+          <div style={{ display: 'flex', gap: 12 }}>
+            {isAuthenticated ? (
+              <>
+                <Button
+                  type="text"
+                  icon={<ShoppingCart size={20} />}
+                  onClick={() => navigate('/mis-ordenes')}
                   style={{
-                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                    fontWeight: 500,
+                    color: '#666',
+                    height: 40,
+                    padding: '0 16px'
                   }}
+                >
+                  Mis Órdenes
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={() => navigate('/mis-entradas')}
+                  style={{
+                    background: 'var(--primary-color)',
+                    border: 'none',
+                    borderRadius: 'var(--border-radius-sm)',
+                    fontWeight: 500,
+                    color: 'white',
+                    height: 40,
+                    padding: '0 24px'
+                  }}
+                >
+                  Mis Entradas
+                </Button>
+                <Button
+                  type="text"
+                  icon={<LogOut size={20} />}
+                  onClick={handleLogout}
+                  title="Cerrar Sesión"
+                  style={{ color: '#666' }}
                 />
-                <span style={{ color: 'white', fontSize: 14 }}>
-                  {user?.name || user?.email?.split('@')[0] || 'Usuario'}
-                </span>
-              </div>
-            </Dropdown>
-          ) : (
-            <>
+              </>
+            ) : (
               <Button
-                type="default"
-                icon={<LoginOutlined />}
+                type="primary"
                 onClick={() => openLoginModal()}
                 style={{
-                  borderColor: 'white',
+                  background: 'var(--primary-color)',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius-sm)',
+                  fontWeight: 500,
                   color: 'white',
-                  background: 'transparent'
+                  height: 40,
+                  padding: '0 24px'
                 }}
               >
                 Ingresar
               </Button>
-              <Button
-                type="primary"
-                icon={<UserAddOutlined />}
-                onClick={() => openRegisterModal()}
-                style={{
-                  background: 'white',
-                  color: '#764ba2',
-                  border: 'none',
-                  fontWeight: 600
-                }}
-              >
-                Registrarse
-              </Button>
-            </>
-          )
+            )}
+          </div>
         ) : (
           // Mobile Hamburger
           <Button 
             type="text" 
-            icon={<MenuOutlined style={{ fontSize: 24, color: 'white' }} />} 
+            icon={<MenuIcon size={24} color="#000" />} 
             onClick={() => setMobileMenuOpen(true)}
           />
         )}
@@ -267,7 +229,7 @@ export default function HeaderNav() {
             <img src={logo} alt="VibraTicket" style={{ height: 32 }} />
             <Button 
               type="text" 
-              icon={<CloseOutlined />} 
+              icon={<X size={20} />} 
               onClick={() => setMobileMenuOpen(false)} 
             />
           </div>
@@ -284,7 +246,7 @@ export default function HeaderNav() {
             <div style={{ marginBottom: 24, textAlign: 'center' }}>
               <Avatar
                 size={64}
-                icon={<UserOutlined />}
+                icon={<User size={32} />}
                 style={{
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   marginBottom: 12
@@ -316,7 +278,7 @@ export default function HeaderNav() {
               <Button 
                 block 
                 size="large" 
-                icon={<UserOutlined />} 
+                icon={<User size={20} />} 
                 onClick={() => handleMobileMenuClick('/profile')}
               >
                 Mi Perfil
@@ -324,7 +286,7 @@ export default function HeaderNav() {
               <Button 
                 block 
                 size="large" 
-                icon={<FileTextOutlined />} 
+                icon={<FileText size={20} />} 
                 onClick={() => handleMobileMenuClick('/mis-entradas')}
               >
                 Mis Entradas
@@ -332,8 +294,16 @@ export default function HeaderNav() {
               <Button 
                 block 
                 size="large" 
+                icon={<ShoppingCart size={20} />} 
+                onClick={() => handleMobileMenuClick('/mis-ordenes')}
+              >
+                Mis Órdenes
+              </Button>
+              <Button 
+                block 
+                size="large" 
                 danger 
-                icon={<LogoutOutlined />} 
+                icon={<LogOut size={20} />} 
                 onClick={handleLogout}
                 style={{ marginTop: 16 }}
               >
@@ -346,7 +316,7 @@ export default function HeaderNav() {
                 block
                 size="large"
                 type="primary"
-                icon={<LoginOutlined />}
+                icon={<LogIn size={20} />}
                 onClick={() => {
                   setMobileMenuOpen(false);
                   openLoginModal();
@@ -363,7 +333,7 @@ export default function HeaderNav() {
               <Button
                 block
                 size="large"
-                icon={<UserAddOutlined />}
+                icon={<UserPlus size={20} />}
                 onClick={() => {
                   setMobileMenuOpen(false);
                   openRegisterModal();

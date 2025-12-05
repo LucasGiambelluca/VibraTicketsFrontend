@@ -17,14 +17,14 @@ export const useEvents = (filters = {}) => {
       const params = {
         page: 1,
         limit: 12,
-        status: 'active',
-        sortBy: 'created_at',
-        sortOrder: 'DESC',
+        sortBy: 'next_show_date',  // Ordenar por próximo show
+        sortOrder: 'ASC',           // Ascendente (próximos primero)
         ...filters,
         ...newFilters
       };
       
-      const response = await eventsApi.getEvents(params);
+      // Usar endpoint público (no requiere autenticación)
+      const response = await eventsApi.getPublicEvents(params);
       
       if (response && response.events && Array.isArray(response.events)) {
         setEvents(response.events);

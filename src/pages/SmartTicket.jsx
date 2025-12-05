@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, Typography, Row, Col, Button, QRCode, Space, Divider, message, Spin, Alert, Grid, Collapse } from 'antd';
+import { Card, Typography, Row, Col, Button, Space, Divider, message, Spin, Alert, Grid, Collapse } from 'antd';
+import TicketQR from '../components/TicketQR';
 import { DownloadOutlined, ShareAltOutlined, EnvironmentOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useParams, Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { testPaymentsApi } from '../services/apiService';
+import { testPaymentsApi, ticketsApi } from '../services/apiService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import logo from '../assets/VibraTicketLogo2.png';
@@ -19,6 +20,7 @@ export default function SmartTicket() {
   const [ticketData, setTicketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   const screens = Grid.useBreakpoint();
 
   // Cargar datos del ticket
@@ -28,6 +30,11 @@ export default function SmartTicket() {
         setLoading(true);
         // Estrategia 1: Intentar obtener ticket específico
         try {
+          if (!testPaymentsApi) {
+            console.error('❌ testPaymentsApi is undefined');
+            throw new Error('API Service unavailable');
+          }
+          console.log('🔍 Fetching ticket detail for:', ticketId);
           const response = await testPaymentsApi.getTicketDetail(ticketId);
           const ticket = response?.data?.ticket || response?.ticket || response;
           setTicketData(ticket);
@@ -61,6 +68,8 @@ export default function SmartTicket() {
       loadTicket();
     }
   }, [ticketId]);
+
+
 
   // Animaciones GSAP
   useEffect(() => {
@@ -117,13 +126,14 @@ export default function SmartTicket() {
       price: price,
       orderNumber: `ORD-${ticketData.orderId || ticketData.order_id || 'N/A'}`,
       ticketNumber: ticketData.ticketNumber || ticketData.ticket_number || ticketId,
-      qrCode: ticketData.qrPayload ? JSON.stringify(ticketData.qrPayload) : (ticketData.qr_code || ticketData.qrCode || JSON.stringify({ 
+      // QR Payload Estático (Fallback)
+      qrCode: ticketData.qrPayload ? JSON.stringify(ticketData.qrPayload) : JSON.stringify({ 
         ticketNumber: ticketData.ticketNumber || ticketData.ticket_number, 
         orderId: ticketData.orderId || ticketData.order_id,
         eventName: eventName,
         sector: section,
         seatNumber: seat
-      })),
+      }),
       status: ticketData.status || 'ISSUED',
       availability_status: ticketData.availability_status || 'available' // Default to available if not present
     };
@@ -312,8 +322,106 @@ export default function SmartTicket() {
 
           <div style={{ padding: '32px' }}>
             <Row gutter={[32, 32]}>
-              {/* Información del Evento */}
-              <Col xs={24} md={14}>
+              {/* QR Code Section - First on Mobile */}
+              <Col xs={{ span: 24, order: 1 }} md={{ span: 10, order: 2 }}>
+                <div className="qr-section" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Title level={4} style={{ marginBottom: 16, display: screens.xs ? 'none' : 'block' }}>
+                    Smart Ticket
+                  </Title>
+                  
+                  {formattedTicket.status === 'CANCELLED' ? (
+                    <div style={{
+                      background: '#fff1f0',
+                      border: '2px solid #ff4d4f',
+                      borderRadius: 16,
+                      padding: 24,
+                      textAlign: 'center',
+                      marginBottom: 24,
+                      width: '100%'
+                    }}>
+                      <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+                      <Title level={3} style={{ color: '#cf1322', margin: 0, textTransform: 'uppercase' }}>
+                        TICKET BLOQUEADO
+                      </Title>
+                      <Text style={{ color: '#cf1322', display: 'block', margin: '16px 0', fontSize: 16 }}>
+                        Este ticket fue anulado por un reporte de contracargo o reembolso.
+                      </Text>
+                      <div style={{
+                        background: '#ff4d4f',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: 4,
+                        fontWeight: 'bold',
+                        display: 'inline-block',
+                        marginTop: 8
+                      }}>
+                        NO VÁLIDO PARA INGRESAR
+                      </div>
+                    </div>
+                  ) : formattedTicket.status === 'ISSUED' && formattedTicket.availability_status === 'pending' ? (
+                     <div style={{
+                      background: '#f6ffed',
+                      padding: '32px 24px',
+                      borderRadius: 16,
+                      marginBottom: 24,
+                      border: '1px dashed #b7eb8f',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%'
+                    }}>
+                      <div style={{ 
+                        background: '#52c41a', 
+                        borderRadius: '50%', 
+                        width: 80, height: 80, 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: 16,
+                        boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
+                      }}>
+                        <SafetyCertificateOutlined style={{ fontSize: 40, color: 'white' }} />
+                      </div>
+                      <Title level={4} style={{ color: '#389e0d', marginBottom: 8 }}>
+                        ¡Lugar Asegurado!
+                      </Title>
+                      <Text type="secondary" style={{ textAlign: 'center', marginBottom: 16 }}>
+                        Por seguridad, tu código QR estará disponible <strong>24hs antes del evento</strong>.
+                      </Text>
+                      <div style={{ background: 'rgba(82, 196, 26, 0.1)', padding: '8px 16px', borderRadius: 8 }}>
+                         <Text style={{ color: '#389e0d', fontSize: 12 }}>
+                           <LockOutlined style={{ marginRight: 4 }} />
+                           Tu entrada está 100% confirmada
+                         </Text>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: 'white',
+                      padding: screens.xs ? 16 : 24,
+                      borderRadius: 24,
+                      marginBottom: 24,
+                      position: 'relative',
+                      boxShadow: screens.xs ? 'none' : '0 4px 20px rgba(0,0,0,0.05)',
+                      width: '100%',
+                      maxWidth: 400
+                    }}>
+                      <TicketQR 
+                        ticketId={ticketData.id || ticketData.ticketId} 
+                        ticketNumber={formattedTicket.ticketNumber} 
+                      />
+
+                      <div style={{ marginTop: 16 }}>
+                        <Text strong style={{ fontSize: '1.1rem', display: 'block', marginBottom: 4 }}>
+                          {formattedTicket.ticketNumber}
+                        </Text>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Col>
+
+              {/* Información del Evento - Second on Mobile */}
+              <Col xs={{ span: 24, order: 2 }} md={{ span: 14, order: 1 }}>
                 <div className="ticket-info">
                   <Space direction="vertical" size="large" style={{ width: '100%' }}>
                     <div>
@@ -396,122 +504,6 @@ export default function SmartTicket() {
                       </Col>
                     </Row>
                   </div>
-                  </Space>
-                </div>
-              </Col>
-
-              {/* QR Code y Acciones */}
-              <Col xs={24} md={10}>
-                <div className="qr-section" style={{ textAlign: 'center' }}>
-                  <Title level={4} style={{ marginBottom: 24 }}>
-                    Smart Ticket
-                  </Title>
-                  
-                  {formattedTicket.status === 'ISSUED' && formattedTicket.availability_status === 'pending' ? (
-                     <div style={{
-                      background: '#f6ffed',
-                      padding: '32px 24px',
-                      borderRadius: 16,
-                      marginBottom: 24,
-                      border: '1px dashed #b7eb8f',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <div style={{ 
-                        background: '#52c41a', 
-                        borderRadius: '50%', 
-                        width: 80, height: 80, 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginBottom: 16,
-                        boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
-                      }}>
-                        <SafetyCertificateOutlined style={{ fontSize: 40, color: 'white' }} />
-                      </div>
-                      <Title level={4} style={{ color: '#389e0d', marginBottom: 8 }}>
-                        ¡Lugar Asegurado!
-                      </Title>
-                      <Text type="secondary" style={{ textAlign: 'center', marginBottom: 16 }}>
-                        Por seguridad, tu código QR estará disponible <strong>24hs antes del evento</strong>.
-                      </Text>
-                      <div style={{ background: 'rgba(82, 196, 26, 0.1)', padding: '8px 16px', borderRadius: 8 }}>
-                         <Text style={{ color: '#389e0d', fontSize: 12 }}>
-                           <LockOutlined style={{ marginRight: 4 }} />
-                           Tu entrada está 100% confirmada
-                         </Text>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{
-                      background: '#f8f9fa',
-                      padding: 24,
-                      borderRadius: 16,
-                      marginBottom: 24
-                    }}>
-                      <QRCode
-                        value={formattedTicket.qrCode}
-                        size={180}
-                        style={{ marginBottom: 16 }}
-                      />
-                      <Text type="secondary" style={{ fontSize: '0.85rem', display: 'block', marginBottom: 4 }}>
-                        Ticket: {formattedTicket.ticketNumber}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '0.85rem' }}>
-                        Orden: {formattedTicket.orderNumber}
-                      </Text>
-                    </div>
-                  )}
-
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Button
-                      type="primary"
-                      icon={<DownloadOutlined />}
-                      size="large"
-                      block
-                      onClick={downloadTicketPDF}
-                      disabled={formattedTicket.availability_status === 'pending'}
-                      style={{
-                        background: formattedTicket.availability_status === 'pending' ? undefined : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        border: 'none',
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        height: 48
-                      }}
-                    >
-                      {formattedTicket.availability_status === 'pending' ? 'Descarga disponible 24hs antes' : 'Descargar PDF'}
-                    </Button>
-                    
-                    <Button
-                      icon={<ShareAltOutlined />}
-                      size="large"
-                      block
-                      onClick={shareTicket}
-                      style={{
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        height: 48
-                      }}
-                    >
-                      Compartir
-                    </Button>
-
-                    <Button
-                      icon={<PrinterOutlined />}
-                      size="large"
-                      block
-                      onClick={printTicket}
-                      disabled={formattedTicket.availability_status === 'pending'}
-                      style={{
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        height: 48,
-                        borderColor: '#1890ff',
-                        color: '#1890ff'
-                      }}
-                    >
-                      Imprimir
-                    </Button>
                   </Space>
                 </div>
               </Col>

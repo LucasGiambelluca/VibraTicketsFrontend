@@ -1,84 +1,77 @@
 import React from 'react';
 import { Typography, Space, Grid } from 'antd';
 import HomeBannerCarousel from '../components/HomeBannerCarousel';
-import SearchBar from '../components/SearchEvents';
 import MainEvents from '../components/MainEvents';
-import '../components/HomeBannerCarousel.css';
+import WhatsAppButton from '../components/WhatsAppButton';
+import MinimalFooter from '../components/MinimalFooter';
 
 const { Title, Text } = Typography;
 
 export default function Home() {
   const screens = Grid.useBreakpoint();
+  
   return (
     <>
-      {/* Fondo Oscuro Premium */}
+      {/* Fondo Blanco Limpio */}
       <div style={{
         position: 'fixed',
         top: 0,
         left: 0,
         width: '100%',
         height: '100%',
-        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        background: 'var(--bg-color)', // Blanco
         zIndex: 0
       }} />
 
-      <div className="fade-in" style={{ position: 'relative', zIndex: 1 }}>
-        {/* Banner Carousel */}
-        <HomeBannerCarousel />
+      <div style={{ position: 'relative', zIndex: 1, paddingTop: 64 }}>
+        {/* Banner Carousel - Solo Desktop */}
+        {screens.md && (
+          <div style={{ paddingTop: 40 }}>
+            <HomeBannerCarousel />
+          </div>
+        )}
 
         {/* Contenido Principal */}
         <div style={{ 
           maxWidth: 1400, 
           margin: '0 auto', 
-          padding: '40px 24px 60px',
-          position: 'relative',
-          zIndex: 1
+          padding: screens.xs ? '40px 20px 60px' : (screens.md ? '40px 40px 80px' : '60px 40px 80px')
         }}>
-          {/* Barra de Búsqueda */}
-          {/* Barra de Búsqueda */}
-          <div style={{ 
-            marginBottom: '48px',
-            maxWidth: '800px',
-            margin: screens.xs ? '0 auto 32px' : '-30px auto 48px', // Reset negative margin on mobile
-            position: 'relative',
-            zIndex: 10
-          }}>
-            <div className="glass-card" style={{ padding: screens.xs ? '16px' : '24px', borderRadius: '16px' }}>
-              <SearchBar />
-            </div>
-          </div>
-
           {/* Sección de Eventos */}
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ textAlign: 'center', marginBottom: 48 }}>
               <Title 
                 level={2} 
                 style={{ 
-                  fontSize: screens.xs ? '2rem' : '3rem',
-                  fontWeight: 800,
+                  fontSize: screens.xs ? '2rem' : '2.5rem',
+                  fontWeight: 700,
                   marginBottom: 8,
-                  background: 'linear-gradient(45deg, #fff, #e0e0e0)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  color: 'var(--text-primary)'
                 }}
               >
                 Próximos Eventos
               </Title>
               <Text 
                 style={{ 
-                  fontSize: '1.2rem', 
-                  color: 'rgba(255,255,255,0.8)',
-                  fontWeight: 300
+                  fontSize: '1.1rem', 
+                  color: 'var(--text-secondary)',
+                  fontWeight: 400
                 }}
               >
                 Descubrí los mejores shows y encontrá tus entradas
               </Text>
             </div>
+            
             <MainEvents />
           </Space>
         </div>
+        
+        {/* Footer */}
+        <MinimalFooter />
       </div>
+
+      {/* WhatsApp Button */}
+      <WhatsAppButton />
     </>
   );
 }

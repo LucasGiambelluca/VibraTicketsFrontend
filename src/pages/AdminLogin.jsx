@@ -58,142 +58,213 @@ export default function AdminLogin() {
   };
 
   return (
-    <div style={{ 
-      background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px'
-    }}>
-      <Card style={{
-        width: '100%',
-        maxWidth: 400,
-        borderRadius: 16,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-        border: 'none'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img 
-            src={logo} 
-            alt="VibraTicket" 
-            style={{ 
-              height: 60,
-              width: 'auto',
-              marginBottom: 16
-            }} 
-          />
-          <SafetyOutlined style={{ fontSize: 48, color: '#1e3c72', marginBottom: 16 }} />
-          <Title level={2} style={{ 
-            background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: 8
-          }}>
-            Portal de Administración
-          </Title>
-          <Text type="secondary">Acceso para Staff y Organizadores</Text>
-        </div>
-
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          size="large"
-        >
-          {error && (
-            <Alert
-              message="Error de autenticación"
-              description={error}
-              type="error"
-              showIcon
-              closable
-              onClose={() => setError(null)}
-              style={{ marginBottom: 16 }}
-            />
-          )}
-
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Ingrese su email' },
-              { type: 'email', message: 'Email inválido' }
-            ]}
-          >
-            <Input 
-              prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
-              placeholder="admin@ticketera.com"
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Contraseña"
-            name="password"
-            rules={[{ required: true, message: 'Ingrese su contraseña' }]}
-          >
-            <Input.Password 
-              prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
-              placeholder="••••••••"
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
-
-          <Form.Item name="remember" valuePropName="checked">
-            <Checkbox>Recordarme</Checkbox>
-          </Form.Item>
-
-          <Form.Item style={{ marginBottom: 16 }}>
-            <Button 
-              type="primary" 
-              htmlType="submit"
-              loading={loading}
-              block
-              style={{
-                background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-                border: 'none',
-                borderRadius: 8,
-                fontWeight: 600,
-                height: 48,
-                fontSize: 16
-              }}
-            >
-              Iniciar Sesión
-            </Button>
-          </Form.Item>
-
-          <div style={{ textAlign: 'center' }}>
-            <Space direction="vertical" size={8}>
-              <Link to="/forgot-password" style={{ color: '#1890ff' }}>
-                ¿Olvidaste tu contraseña?
-              </Link>
-              <Text type="secondary">
-                ¿Eres cliente?{' '}
-                <Link to="/customerlogin" style={{ color: '#1890ff', fontWeight: 600 }}>
-                  Ingresa aquí
-                </Link>
-              </Text>
-            </Space>
-          </div>
-        </Form>
-
-      </Card>
-
-      {/* Footer */}
+    <>
+      {/* Header con botón de volver - solo en mobile */}
       <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-        padding: '16px',
-        textAlign: 'center'
+        display: 'none',
+        '@media (maxWidth: 768px)': {
+          display: 'block'
+        }
       }}>
-        <Text style={{ color: 'white', fontSize: '0.9rem' }}>
-          © {new Date().getFullYear()} VibraTicket | Portal de Administración
-        </Text>
+        <div className="mobile-login-header" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 60,
+          background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          zIndex: 1000
+        }}>
+          <Button 
+            type="text" 
+            icon={<span style={{ fontSize: 20, color: 'white' }}>←</span>}
+            onClick={() => navigate('/')}
+            style={{ marginRight: 16, color: 'white' }}
+          >
+            Volver
+          </Button>
+          <img src={logo} alt="VibraTicket" style={{ height: 32 }} />
+        </div>
       </div>
-    </div>
+
+      {/* Contenedor principal */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: '24px',
+        paddingTop: '40px'
+      }}
+      className="admin-login-container"
+      >
+        <style>{`
+          @media (max-width: 768px) {
+            .admin-login-container {
+              padding: 0 !important;
+              padding-top: 60px !important;
+              background: white !important;
+            }
+            .admin-login-card {
+              box-shadow: none !important;
+              border-radius: 0 !important;
+            }
+            .mobile-login-header {
+              display: flex !important;
+            }
+          }
+        `}</style>
+        
+        <Card 
+          className="admin-login-card"
+          style={{
+            width: '100%',
+            maxWidth: 400,
+            borderRadius: 16,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            border: 'none'
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <img 
+              src={logo} 
+              alt="VibraTicket" 
+              className="desktop-logo"
+              style={{ 
+                height: 60,
+                width: 'auto',
+                marginBottom: 16
+              }} 
+            />
+            <style>{`
+              @media (max-width: 768px) {
+                .desktop-logo {
+                  display: none;
+                }
+              }
+            `}</style>
+            <SafetyOutlined style={{ fontSize: 48, color: '#1e3c72', marginBottom: 16 }} />
+            <Title level={2} style={{ 
+              background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              marginBottom: 8
+            }}>
+              Portal de Administración
+            </Title>
+            <Text type="secondary">Acceso para Staff y Organizadores</Text>
+          </div>
+
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            size="large"
+          >
+            {error && (
+              <Alert
+                message="Error de autenticación"
+                description={error}
+                type="error"
+                showIcon
+                closable
+                onClose={() => setError(null)}
+                style={{ marginBottom: 16 }}
+              />
+            )}
+
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                { required: true, message: 'Ingrese su email' },
+                { type: 'email', message: 'Email inválido' }
+              ]}
+            >
+              <Input 
+                prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                placeholder="admin@ticketera.com"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Contraseña"
+              name="password"
+              rules={[{ required: true, message: 'Ingrese su contraseña' }]}
+            >
+              <Input.Password 
+                prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
+                placeholder="••••••••"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+
+            <Form.Item name="remember" valuePropName="checked">
+              <Checkbox>Recordarme</Checkbox>
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 16 }}>
+              <Button 
+                type="primary" 
+                htmlType="submit"
+                loading={loading}
+                block
+                style={{
+                  background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  height: 48,
+                  fontSize: 16
+                }}
+              >
+                Iniciar Sesión
+              </Button>
+            </Form.Item>
+
+            <div style={{ textAlign: 'center' }}>
+              <Space direction="vertical" size={8}>
+                <Link to="/forgot-password" style={{ color: '#1890ff' }}>
+                  ¿Olvidaste tu contraseña?
+                </Link>
+                <Text type="secondary">
+                  ¿Eres cliente?{' '}
+                  <Link to="/customerlogin" style={{ color: '#1890ff', fontWeight: 600 }}>
+                    Ingresa aquí
+                  </Link>
+                </Text>
+              </Space>
+            </div>
+          </Form>
+        </Card>
+
+        {/* Footer - solo en desktop */}
+        <div className="desktop-footer" style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+          padding: '16px',
+          textAlign: 'center'
+        }}>
+          <style>{`
+            @media (max-width: 768px) {
+              .desktop-footer {
+                display: none;
+              }
+            }
+          `}</style>
+          <Text style={{ color: 'white', fontSize: '0.9rem' }}>
+            © {new Date().getFullYear()} VibraTicket | Portal de Administración
+          </Text>
+        </div>
+      </div>
+    </>
   );
 }

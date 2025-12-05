@@ -1,5 +1,5 @@
 // Utility para manejar URLs de imágenes de forma consistente
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vibratickets.online';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * Obtiene la URL completa de una imagen

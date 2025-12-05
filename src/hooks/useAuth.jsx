@@ -15,24 +15,32 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // ============================================
-  // INICIALIZACIÓN - Cargar usuario del localStorage
+  // INICIALIZACIÓN - Verificar sesión con el backend
   // ============================================
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('user');
-        const storedToken = localStorage.getItem('token');
+        // Intentar obtener el usuario actual desde el backend (usa cookie)
+        const response = await usersApi.getMe();
+        let userData = response.data || response;
         
-        if (storedUser && storedToken) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          } else {
-          }
+        console.log('👤 initAuth response:', userData);
+
+        // Normalizar: si viene envuelto en { user: ... }
+        if (userData && userData.user) {
+          userData = userData.user;
+        }
+        
+        if (userData) {
+          setUser(userData);
+        }
       } catch (err) {
-        console.error('❌ Error al cargar usuario:', err);
-        // Limpiar localStorage si hay error
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        // Si falla (401), no hay sesión activa
+        // No es necesario loguear error si es solo que no está logueado
+        if (err.response?.status !== 401) {
+          console.error('❌ Error al verificar sesión:', err);
+        }
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -52,16 +60,12 @@ export const AuthProvider = ({ children }) => {
       // Llamar a la API de login
       const response = await authApi.login(credentials);
       
-      // Extraer datos según la estructura de la API
-      const { user: userData, token } = response.data || response;
+      // Extraer datos (el token ya está en la cookie)
+      const { user: userData } = response.data || response;
       
-      if (!userData || !token) {
+      if (!userData) {
         throw new Error('Respuesta inválida del servidor');
       }
-      
-      // Guardar en localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
       
       // Actualizar estado
       setUser(userData);
@@ -88,16 +92,12 @@ export const AuthProvider = ({ children }) => {
       // Llamar a la API de registro
       const response = await authApi.register(userData);
       
-      // Extraer datos según la estructura de la API
-      const { user: newUser, token } = response.data || response;
+      // Extraer datos (el token ya está en la cookie)
+      const { user: newUser } = response.data || response;
       
-      if (!newUser || !token) {
+      if (!newUser) {
         throw new Error('Respuesta inválida del servidor');
       }
-      
-      // Guardar en localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(newUser));
       
       // Actualizar estado
       setUser(newUser);
@@ -116,16 +116,20 @@ export const AuthProvider = ({ children }) => {
   // ============================================
   // LOGOUT
   // ============================================
-  const logout = () => {
-    // Limpiar localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    
-    // Limpiar estado
-    setUser(null);
-    setError(null);
-    
-    };
+  const logout = async () => {
+    try {
+      // Llamar al backend para borrar la cookie
+      await authApi.logout();
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    } finally {
+      // Limpiar estado local independientemente del resultado
+      setUser(null);
+      setError(null);
+      // Opcional: Redirigir o recargar si es necesario
+      window.location.href = '/login';
+    }
+  };
 
   // ============================================
   // REFRESH USER - Actualizar datos del usuario
@@ -134,9 +138,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await usersApi.getMe();
       const userData = response.data || response;
-      
-      // Actualizar localStorage
-      localStorage.setItem('user', JSON.stringify(userData));
       
       // Actualizar estado
       setUser(userData);

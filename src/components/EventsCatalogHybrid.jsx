@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Input, Select, DatePicker, Button, Space, Typography, Tag, Empty, Spin, Pagination } from 'antd';
-import { SearchOutlined, CalendarOutlined, EnvironmentOutlined, FilterOutlined, ClearOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Search, Calendar, MapPin, Filter, X, Info } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEventsWithShows } from '../hooks/useEventsWithShows';
 import { format } from 'date-fns';
@@ -158,7 +158,7 @@ export default function EventsCatalogHybrid() {
             <Input
               size="large"
               placeholder="Buscar por nombre, artista o venue..."
-              prefix={<SearchOutlined style={{ color: '#667eea', fontSize: 20 }} />}
+              prefix={<Search size={20} style={{ color: '#667eea' }} />}
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               allowClear
@@ -177,7 +177,7 @@ export default function EventsCatalogHybrid() {
           <Select
             size="large"
             placeholder="Ciudad"
-            suffixIcon={<EnvironmentOutlined style={{ color: '#667eea' }} />}
+            suffixIcon={<MapPin size={16} style={{ color: '#667eea' }} />}
             value={filters.city || undefined}
             onChange={(value) => handleFilterChange('city', value)}
             allowClear
@@ -192,7 +192,7 @@ export default function EventsCatalogHybrid() {
           <Select
             size="large"
             placeholder="Categoría"
-            suffixIcon={<FilterOutlined style={{ color: '#667eea' }} />}
+            suffixIcon={<Filter size={16} style={{ color: '#667eea' }} />}
             value={filters.category || undefined}
             onChange={(value) => handleFilterChange('category', value)}
             allowClear
@@ -279,6 +279,19 @@ export default function EventsCatalogHybrid() {
                 } catch (e) {
                   nextShowDate = null;
                 }
+
+                // Lógica de inicio de venta
+                const now = new Date();
+                const saleStartDate = event.sale_start_date ? new Date(event.sale_start_date) : null;
+                const isSalePending = saleStartDate && saleStartDate > now;
+                
+                // Formatear fecha de inicio de venta
+                const saleStartString = saleStartDate?.toLocaleString('es-AR', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
                 
                 return (
                   <div
@@ -335,8 +348,10 @@ export default function EventsCatalogHybrid() {
                         <div style={{ padding: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
                           <div style={{ flex: 1, minWidth: '280px' }}>
                             <div style={{ marginBottom: 12 }}>
-                              {hasShows ? (
+                              {hasShows && !isSalePending ? (
                                 <Tag color="#87d068" style={{ border: 'none', padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>DISPONIBLE</Tag>
+                              ) : isSalePending ? (
+                                <Tag color="#1890ff" style={{ border: 'none', padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>PRÓXIMAMENTE</Tag>
                               ) : (
                                 <Tag color="#f50" style={{ border: 'none', padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>AGOTADO</Tag>
                               )}
@@ -358,12 +373,12 @@ export default function EventsCatalogHybrid() {
 
                             <Space size={24} style={{ color: 'rgba(255,255,255,0.7)' }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <EnvironmentOutlined />
+                                <MapPin size={16} />
                                 {event.venue_name || 'Venue por confirmar'}, {event.venue_city}
                               </span>
                               {nextShowDate && (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <CalendarOutlined />
+                                  <Calendar size={16} />
                                   {nextShowDate.toLocaleDateString('es-AR', { 
                                     weekday: 'long',
                                     day: 'numeric',
@@ -394,19 +409,19 @@ export default function EventsCatalogHybrid() {
                             <Button
                               type="primary"
                               size="large"
-                              disabled={!hasShows}
+                              disabled={!hasShows || isSalePending}
                               style={{
-                                background: hasShows ? '#fff' : 'rgba(255,255,255,0.1)',
-                                color: hasShows ? '#667eea' : 'rgba(255,255,255,0.5)',
+                                background: hasShows && !isSalePending ? '#fff' : 'rgba(255,255,255,0.1)',
+                                color: hasShows && !isSalePending ? '#667eea' : 'rgba(255,255,255,0.5)',
                                 border: 'none',
                                 borderRadius: '12px',
                                 fontWeight: '700',
                                 height: '48px',
                                 padding: '0 32px',
-                                boxShadow: hasShows ? '0 4px 15px rgba(0,0,0,0.2)' : 'none'
+                                boxShadow: hasShows && !isSalePending ? '0 4px 15px rgba(0,0,0,0.2)' : 'none'
                               }}
                             >
-                              {hasShows ? 'CONSEGUIR ENTRADAS' : 'PRÓXIMAMENTE'}
+                              {hasShows ? (isSalePending ? `VENTA: ${saleStartString}` : 'CONSEGUIR ENTRADAS') : 'PRÓXIMAMENTE'}
                             </Button>
                           </div>
                         </div>

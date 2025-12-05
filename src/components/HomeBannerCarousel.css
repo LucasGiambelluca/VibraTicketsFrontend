@@ -1,66 +1,56 @@
-/* Estilos para el carousel de banners */
+/* Estilos minimalistas para el carousel de banners */
 
-/* Transición fade elegante */
-.ant-carousel .slick-slide {
-  transition: opacity 1.5s ease-in-out !important;
-}
-
-/* Dots del carousel */
-.custom-carousel-dots {
-  bottom: 32px !important;
-  z-index: 10 !important;
-}
-
-.custom-carousel-dots li {
-  margin: 0 6px !important;
-}
-
-.custom-carousel-dots li button {
-  background: rgba(255, 255, 255, 0.4) !important;
-  height: 4px !important;
-  width: 24px !important;
-  border-radius: 2px !important;
-  transition: all 0.4s ease !important;
-  opacity: 0.8 !important;
-}
-
-.custom-carousel-dots li button:hover {
-  background: rgba(255, 255, 255, 0.7) !important;
-  opacity: 1 !important;
-}
-
-.custom-carousel-dots li.slick-active button {
-  background: white !important;
-  width: 48px !important;
-  opacity: 1 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Animación suave de zoom en hover */
-.banner-slide {
+/* Carousel container */
+.ant-carousel {
+  border-radius: var(--border-radius);
   overflow: hidden;
 }
 
-.banner-slide > div {
-  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+/* Smooth transitions */
+.ant-carousel .slick-slide {
+  transition: opacity 0.6s ease-in-out !important;
 }
 
-.banner-slide:hover > div {
-  transform: scale(1.02);
+/* Dots minimalistas */
+.ant-carousel .slick-dots {
+  bottom: 24px !important;
+  z-index: 10 !important;
+}
+
+.ant-carousel .slick-dots li {
+  margin: 0 4px !important;
+}
+
+.ant-carousel .slick-dots li button {
+  background: rgba(255, 255, 255, 0.5) !important;
+  height: 3px !important;
+  width: 24px !important;
+  border-radius: 2px !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-carousel .slick-dots li button:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+.ant-carousel .slick-dots li.slick-active button {
+  background: white !important;
+  width: 40px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .custom-carousel-dots {
+  .ant-carousel .slick-dots {
     bottom: 16px !important;
   }
   
-  .custom-carousel-dots li button {
-    width: 16px !important;
-    height: 3px !important;
+  .ant-carousel .slick-dots li button {
+    width: 20px !important;
+    height: 2px !important;
   }
   
-  .custom-carousel-dots li.slick-active button {
+  .ant-carousel .slick-dots li.slick-active button {
     width: 32px !important;
   }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Result, Button, Spin, Typography, Space, Divider, Tag, message } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircleOutlined, DownloadOutlined, HomeOutlined, SyncOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { CheckCircle, Download, Home, RefreshCw, XCircle, Clock } from 'lucide-react';
 import { paymentsApi } from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
@@ -123,7 +123,7 @@ export default function PaymentSuccess() {
       }}>
         <Card style={{ textAlign: 'center', width: 400, borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
           <Space direction="vertical" size="large">
-            <Spin size="large" indicator={<SyncOutlined spin style={{ fontSize: 48, color: '#1890ff' }} />} />
+            <Spin size="large" indicator={<RefreshCw className="spin" size={48} style={{ color: '#1890ff' }} />} />
             <div>
               <Title level={4}>Procesando pago...</Title>
               <Text type="secondary">Estamos confirmando tu transacción con Mercado Pago.</Text>
@@ -142,7 +142,7 @@ export default function PaymentSuccess() {
         <Card style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
           <Result
             status="error"
-            icon={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />}
+            icon={<XCircle size={72} style={{ color: '#ff4d4f' }} />}
             title="Hubo un problema con tu pago"
             subTitle={error}
             extra={[
@@ -166,7 +166,7 @@ export default function PaymentSuccess() {
         <Card style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
           <Result
             status="warning"
-            icon={<ClockCircleOutlined style={{ color: '#faad14' }} />}
+            icon={<Clock size={72} style={{ color: '#faad14' }} />}
             title="Pago en proceso"
             subTitle="Tu pago se está procesando pero está tardando más de lo esperado. No te preocupes, te avisaremos por email cuando se confirme."
             extra={[
@@ -198,7 +198,7 @@ export default function PaymentSuccess() {
       <Card style={{ borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
         <Result
           status="success"
-          icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+          icon={<CheckCircle size={72} style={{ color: '#52c41a' }} />}
           title={
             <Title level={2} style={{ color: '#52c41a', margin: 0 }}>
               ¡Pago Exitoso!
@@ -209,7 +209,7 @@ export default function PaymentSuccess() {
             <Button 
               type="primary" 
               size="large"
-              icon={<DownloadOutlined />}
+              icon={<Download size={20} />}
               onClick={() => navigate('/mis-entradas')}
               key="tickets"
               style={{ background: '#52c41a', borderColor: '#52c41a' }}
@@ -218,7 +218,7 @@ export default function PaymentSuccess() {
             </Button>,
             <Button 
               size="large"
-              icon={<HomeOutlined />}
+              icon={<Home size={20} />}
               onClick={() => navigate('/')}
               key="home"
             >
@@ -280,7 +280,7 @@ export default function PaymentSuccess() {
             border: '1px solid #b7eb8f'
           }}>
             <Paragraph style={{ marginBottom: 0 }}>
-              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+              <CheckCircle size={16} style={{ color: '#52c41a', marginRight: 8 }} />
               <strong>¡Tu compra está confirmada!</strong> Recibirás un email con tus entradas.
             </Paragraph>
           </div>

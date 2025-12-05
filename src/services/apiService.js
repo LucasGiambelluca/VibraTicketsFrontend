@@ -19,6 +19,11 @@ export const authApi = {
     return apiClient.post(`${API_BASE}/auth/login`, credentials);
   },
 
+  // Logout de usuario (limpiar cookie)
+  logout: () => {
+    return apiClient.post(`${API_BASE}/auth/logout`);
+  },
+
   // Verificar si email está disponible
   checkEmail: (email) => {
     return apiClient.post(`${API_BASE}/auth/check-email`, { email });
@@ -102,7 +107,7 @@ export const usersApi = {
 
   // Obtener órdenes del usuario
   getMyOrders: () => {
-    return apiClient.get(`${API_BASE}/users/me/orders`);
+    return apiClient.get(`${API_BASE}/orders/my-orders`);
   },
 
   // Obtener tickets del usuario
@@ -182,7 +187,7 @@ export const adminPaymentsApi = {
 
 // Events API
 export const eventsApi = {
-  // Lista paginada y filtrada de eventos
+  // Lista paginada y filtrada de eventos (requiere autenticación - para admin)
   getEvents: (params = {}) => {
     const { 
       page = 1, 
@@ -214,6 +219,28 @@ export const eventsApi = {
       priceMin,
       priceMax
     });
+  },
+
+  // 🌐 PÚBLICO: Lista de eventos públicos (NO requiere autenticación)
+  // Optimizado para el público: solo eventos con shows próximos
+  // Incluye: min_price_cents, next_show_date, cover_square_url, cover_horizontal_url
+  getPublicEvents: (params = {}) => {
+    const { 
+      page = 1, 
+      limit = 12, 
+      search = '', 
+      category,
+      city,
+      sortBy = 'next_show_date',
+      sortOrder = 'ASC'
+    } = params;
+    
+    const queryParams = { page, limit, sortBy, sortOrder };
+    if (search) queryParams.search = search;
+    if (category) queryParams.category = category;
+    if (city) queryParams.city = city;
+    
+    return apiClient.get(`${API_BASE}/events/public`, queryParams);
   },
 
   // Búsqueda rápida (autocomplete)
@@ -471,6 +498,21 @@ export const holdsApi = {
 // ORDERS API - Sistema de órdenes de compra
 // ============================================
 export const ordersApi = {
+  // Obtener una orden por ID
+  getOrder: (id) => {
+    return apiClient.get(`${API_BASE}/orders/${id}`);
+  },
+
+  // Obtener órdenes del usuario actual
+  getMyOrders: () => {
+    return apiClient.get(`${API_BASE}/orders/my-orders`);
+  },
+
+  // Reintentar pago de una orden pendiente
+  resumeOrder: (orderId) => {
+    return apiClient.post(`${API_BASE}/orders/${orderId}/resume`);
+  },
+
   // Crear ORDER desde un HOLD
   // RUTA: POST /api/orders
   createOrder: (orderData, usePersistedKey = false) => {
@@ -571,6 +613,12 @@ export const ticketsApi = {
   // Requiere autenticación - Retorna cuántos boletos puede comprar el usuario
   getAvailability: (eventId) => {
     return apiClient.get(`${API_BASE}/tickets/available/${eventId}`);
+  },
+
+  // Obtener QR dinámico (TOTP)
+  // RUTA: GET /api/tickets/:ticketId/dynamic-qr
+  getDynamicQR: (ticketId) => {
+    return apiClient.get(`${API_BASE}/tickets/${ticketId}/dynamic-qr`);
   }
 };
 

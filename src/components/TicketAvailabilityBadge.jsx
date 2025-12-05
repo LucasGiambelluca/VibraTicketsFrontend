@@ -91,13 +91,13 @@ export default function TicketAvailabilityBadge({ eventId }) {
   }
 
   // Quedan pocos boletos (advertencia)
-  if (availability.available <= 2) {
+  if (availability.available > 0 && availability.available < 20) {
     return (
       <Alert
-        message={`Solo podés comprar ${availability.available} boleto${availability.available > 1 ? 's' : ''} más`}
+        message="¡Últimas localidades!"
         description={
           <>
-            Ya compraste {availability.purchased?.byUser || 0} de {availability.maxPerEvent} boletos permitidos para este evento.
+            Quedan muy pocos lugares disponibles para este evento.
           </>
         }
         type="warning"
@@ -108,10 +108,10 @@ export default function TicketAvailabilityBadge({ eventId }) {
     );
   }
 
-  // Disponible
+  // Disponible (más de 20) - No mostrar cantidad exacta
   return (
     <Alert
-      message={`Podés comprar hasta ${availability.available} boletos`}
+      message="Entradas disponibles"
       description={
         <>
           Límite: {availability.maxPerEvent} boletos por persona por evento.

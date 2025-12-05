@@ -8,8 +8,13 @@ import MercadoPagoButton from '../components/MercadoPagoButton';
 import DiscountCodeAdvanced from '../components/checkout/DiscountCodeAdvanced';
 import OrderSummary from '../components/checkout/OrderSummary';
 import CountdownTimer from '../components/checkout/CountdownTimer';
+import StickyMobileTotalBar from '../components/checkout/StickyMobileTotalBar';
+// import Turnstile from '../components/Turnstile';
 
 const { Title, Text } = Typography;
+
+// Key for localStorage auto-save
+const CHECKOUT_FORM_KEY = 'vibratickets_checkout_form';
 
 export default function Checkout() {
   const { holdId: holdIdParam } = useParams();
@@ -27,6 +32,10 @@ export default function Checkout() {
   const [loadingHold, setLoadingHold] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  // const [captchaToken, setCaptchaToken] = useState(null);
+  const payButtonRef = React.useRef(null);
+  // const recaptchaRef = React.useRef(null);
   
   // Se obtendrán del holdData para mayor fiabilidad
   const [show, setShow] = useState(location.state?.show || null);
@@ -48,6 +57,7 @@ export default function Checkout() {
         const response = await holdsApi.getHold(holdId);
         setHoldData(response);
 
+        // Asegurar que show y event estén seteados si vienen en la respuesta
         if (response.show) setShow(response.show);
         if (response.event) setEvent(response.event);
         
@@ -57,21 +67,94 @@ export default function Checkout() {
           const diffMs = expiresAt - now;
           setTimeLeft(Math.max(0, Math.floor(diffMs / 1000)));
         }
+
+        // RECOVERY: Check if there is a pending order for this hold
+        // This is crucial for users returning from failed payments
+        const storedOrderId = localStorage.getItem('lastOrderId');
+        if (storedOrderId) {
+          // Optional: Verify if this order belongs to this hold or user
+          // For now, we assume if they are on this checkout page, they might want to pay this order
+          console.log('Found stored orderId:', storedOrderId);
+        }
+
       } catch (error) {
         console.error('❌ Error cargando hold:', error);
-        message.error('No se pudo cargar la información de la reserva.');
-        setTimeout(() => navigate('/'), 3000);
+        // Si el error es porque el hold ya fue usado (HoldAlreadyUsed), 
+        // podría ser que ya existe una orden. Intentar recuperar.
+        if (error.response?.data?.error === 'HoldAlreadyUsed' || error.message?.includes('HoldAlreadyUsed')) {
+             message.warning('Esta reserva ya fue procesada. Verificando orden...');
+             // Aquí podríamos redirigir a una página de "Pagar Orden" si tuviéramos el ID
+             // O intentar buscar la orden por holdId si el backend lo permite
+        } else {
+            message.error('No se pudo cargar la información de la reserva.');
+            setTimeout(() => navigate('/'), 3000);
+        }
       } finally {
         setLoadingHold(false);
       }
     };
 
-    if (holdId && !holdData) {
+    if (holdId) {
+      // Siempre cargar datos frescos del backend para asegurar consistencia
       loadHoldData();
-    } else if (holdData) {
-      setLoadingHold(false);
     }
-  }, [holdId, holdData, navigate]);
+  }, [holdId, navigate]);
+
+  // Load saved form data from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CHECKOUT_FORM_KEY);
+      if (saved) {
+        const savedData = JSON.parse(saved);
+        // Only use saved data if user doesn't have data already
+        if (!user?.email) {
+          form.setFieldsValue({
+            name: savedData.name,
+            surname: savedData.surname,
+            email: savedData.email,
+            phone: savedData.phone,
+            areaCode: savedData.areaCode,
+            idType: savedData.idType || 'DNI',
+            idNumber: savedData.idNumber
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load saved form data:', e);
+    }
+  }, [form, user]);
+
+  // Save form data to localStorage on change
+  const handleFormValuesChange = (changedValues, allValues) => {
+    try {
+      localStorage.setItem(CHECKOUT_FORM_KEY, JSON.stringify(allValues));
+    } catch (e) {
+      console.warn('Could not save form data:', e);
+    }
+  };
+
+  // Handler for sticky bar pay button - scrolls to form and triggers validation
+  const handleStickyPayClick = () => {
+    form.validateFields()
+      .then(() => {
+        // Scroll to payment button and click it
+        if (payButtonRef.current) {
+          payButtonRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Trigger the MercadoPago button click after scroll
+          setTimeout(() => {
+            const mpButton = payButtonRef.current?.querySelector('button');
+            if (mpButton) mpButton.click();
+          }, 500);
+        }
+      })
+      .catch(() => {
+        // Scroll to first error field
+        const firstError = document.querySelector('.ant-form-item-has-error');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+  };
 
   // Countdown timer
   useEffect(() => {
@@ -152,7 +235,7 @@ export default function Checkout() {
   if (!holdData) return null;
 
   return (
-    <div className="fade-in" style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="fade-in" style={{ padding: '24px', paddingBottom: screens.xs ? '100px' : '24px', maxWidth: 1200, margin: '0 auto' }}>
       
       {/* Header Steps */}
       <div style={{ marginBottom: '32px' }}>
@@ -192,7 +275,7 @@ export default function Checkout() {
             }}
           >
             <Space>
-              <ShoppingCartOutlined style={{ color: '#667eea' }} />
+              {/* <ShoppingCartOutlined style={{ color: '#667eea' }} /> */}
               <Text strong>
                 {summaryOpen ? 'Ocultar Resumen' : 'Ver Resumen de Compra'}
               </Text>
@@ -229,13 +312,14 @@ export default function Checkout() {
         <Col xs={24} lg={14} order={2} lgOrder={1}>
           <div className="glass-card" style={{ padding: '32px' }}>
             <Title level={3} style={{ marginBottom: '24px', display: 'flex', alignItems: 'center' }}>
-              <LockOutlined style={{ marginRight: '12px', color: '#52c41a' }} />
+              {/* <LockOutlined style={{ marginRight: '12px', color: '#52c41a' }} /> */}
               Datos de Facturación
             </Title>
             
             <Form
               form={form}
               layout="vertical"
+              onValuesChange={handleFormValuesChange}
               initialValues={{
                 email: user?.email,
                 name: user?.name?.split(' ')[0],
@@ -300,18 +384,30 @@ export default function Checkout() {
                 style={{ marginBottom: '24px', background: 'rgba(82, 196, 26, 0.1)', border: '1px solid #b7eb8f' }}
               />
 
-              <Form.Item shouldUpdate style={{ marginBottom: 0 }}>
-                {() => (
+              {/* Cloudflare Turnstile - TEMPORALMENTE DESACTIVADO */}
+              {/* <Turnstile
+                ref={recaptchaRef}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onError={() => {
+                  setCaptchaToken(null);
+                  message.error('Error al verificar Turnstile. Intenta nuevamente.');
+                }}
+                onExpire={() => setCaptchaToken(null)}
+              /> */}
+
+              <Form.Item style={{ marginBottom: 0 }}>
+                <div ref={payButtonRef}>
                   <MercadoPagoButton
                     holdId={holdId}
-                    payer={getPayerInfo()}
                     totalAmount={total}
                     discountCode={appliedDiscount?.code}
                     discountAmount={discountAmount}
                     onError={handlePaymentError}
                     form={form}
+                    onLoadingChange={setPaymentLoading}
+                    // captchaToken={captchaToken}
                   />
-                )}
+                </div>
               </Form.Item>
             </Form>
           </div>
@@ -321,7 +417,8 @@ export default function Checkout() {
         <Col xs={24} lg={10} order={1} lgOrder={2}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             
-            {/* Timer Card */}
+            {/* Timer Card - REMOVED for mobile cleanliness request */}
+            {/* 
             <div className="glass-card" style={{ padding: '24px', textAlign: 'center', borderLeft: '4px solid #faad14' }}>
               <Text type="secondary">Tiempo restante para completar la compra</Text>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#faad14', marginTop: '8px' }}>
@@ -329,6 +426,7 @@ export default function Checkout() {
                 {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
               </div>
             </div>
+            */}
 
             {/* Order Summary (Desktop only or if not xs) */}
             {!screens.xs && (
@@ -368,6 +466,15 @@ export default function Checkout() {
           </Space>
         </Col>
       </Row>
+
+      {/* Sticky Mobile Total Bar */}
+      {screens.xs && (
+        <StickyMobileTotalBar
+          total={total}
+          onPayClick={handleStickyPayClick}
+          loading={paymentLoading}
+        />
+      )}
     </div>
   );
 }

@@ -5,9 +5,24 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // Permite acceso desde ngrok y otras conexiones externas
+    
+    hmr: {
+      clientPort: 443 // Para que HMR funcione con HTTPS de ngrok
+    },
+    allowedHosts: [
+      '.ngrok-free.app',
+      '.ngrok.io'
+    ],
     proxy: {
       '/api': {
-        target: 'https://vibra-tickets-backend.onrender.com',
+        target: 'https://vibratickets.online',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      },
+      '/uploads': {
+        target: 'https://vibratickets.online',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path

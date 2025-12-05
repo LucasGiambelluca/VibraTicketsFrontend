@@ -28,6 +28,7 @@ import Checkout from "./pages/Checkout";
 import CheckoutNew from "./pages/CheckoutNew";
 import OrderSuccess from "./pages/OrderSuccess";
 import MisEntradas from "./pages/MisEntradas";
+import MisOrdenes from "./pages/MisOrdenes";
 import SmartTicket from "./pages/SmartTicket";
 import Profile from "./pages/Profile";
 import Help from "./pages/Help";
@@ -43,12 +44,12 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Soporte from "./pages/Soporte";
 import SoporteTickets from "./pages/SoporteTickets";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsersPanel from "./pages/admin/AdminUsersPanel";
-import ManageOrders from "./pages/admin/ManageOrders";
-
-import DiscountCodes from "./pages/admin/DiscountCodes";
-import FinancialReports from "./pages/admin/FinancialReports";
+// Admin pages removed - Decoupled to ticketera-admin
+// import AdminDashboard from "./pages/admin/AdminDashboard";
+// import AdminUsersPanel from "./pages/admin/AdminUsersPanel";
+// import ManageOrders from "./pages/admin/ManageOrders";
+// import DiscountCodes from "./pages/admin/DiscountCodes";
+// import FinancialReports from "./pages/admin/FinancialReports";
 import TestDiscount from "./pages/TestDiscount";
 import MyHolds from "./pages/MyHolds";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -115,26 +116,42 @@ export default function App() {
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#667eea',
+          colorPrimary: '#000000', // Negro premium
           fontFamily: 'Inter, sans-serif',
           borderRadius: 8,
+          colorText: '#1f1f1f',
+          colorBgBase: '#ffffff',
         },
         components: {
           Button: {
             borderRadius: 8,
-            controlHeight: 40,
-            boxShadow: '0 2px 0 rgba(0, 0, 0, 0.04)',
+            controlHeight: 44, // Botones más altos
+            boxShadow: '0 4px 14px 0 rgba(0,0,0,0.1)', // Sombra sutil
+            fontWeight: 600,
+            colorPrimary: '#000000',
+            algorithm: true, // Habilitar algoritmos derivados
           },
           Card: {
             borderRadiusLG: 16,
+            boxShadowTertiary: '0 10px 40px -10px rgba(0,0,0,0.08)', // Sombra moderna
           },
           Input: {
-            controlHeight: 42,
+            controlHeight: 44,
             borderRadius: 8,
+            activeBorderColor: '#000000',
+            hoverBorderColor: '#404040',
           },
           Select: {
-            controlHeight: 42,
+            controlHeight: 44,
             borderRadius: 8,
+          },
+          Modal: {
+            borderRadiusLG: 16,
+            contentBg: '#ffffff',
+            headerBg: '#ffffff',
+          },
+          Tag: {
+            borderRadiusSM: 6,
           }
         }
       }}
@@ -248,6 +265,14 @@ export default function App() {
               } 
             />
             <Route 
+              path="/mis-ordenes" 
+              element={
+                <ProtectedRoute>
+                  <MisOrdenes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/ticket/:ticketId" 
               element={
                 <ProtectedRoute>
@@ -288,47 +313,11 @@ export default function App() {
               } 
             />
             
-            {/* Rutas de Admin - Solo ADMIN y ORGANIZER */}
-            <Route 
-              path="/admin" 
-              element={
-                <OrganizerRoute>
-                  <AdminDashboard />
-                </OrganizerRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <AdminRoute>
-                  <AdminUsersPanel />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/orders" 
-              element={
-                <AdminRoute>
-                  <ManageOrders />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/discount-codes" 
-              element={
-                <AdminRoute>
-                  <DiscountCodes />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/reports" 
-              element={
-                <AdminRoute>
-                  <FinancialReports />
-                </AdminRoute>
-              } 
-            />
+            {/* Rutas de Admin - MOVIDAS A TICKETERA-ADMIN */}
+            {/* 
+              Las rutas de administración han sido desacopladas.
+              Para acceder al panel de administración, utilice la aplicación ticketera-admin.
+            */}
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

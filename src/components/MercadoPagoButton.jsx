@@ -23,32 +23,75 @@ export default function MercadoPagoButton({
   discountCode,
   discountAmount,
   onError,
+  onLoadingChange, // Callback to sync loading state with parent
   form, // Ant Design Form instance for validation
+  captchaToken, // reCAPTCHA token for bot protection
   size = 'large',
   block = true 
 }) {
   const [loading, setLoading] = useState(false);
+  
+  // Sync loading state with parent
+  React.useEffect(() => {
+    if (onLoadingChange) onLoadingChange(loading);
+  }, [loading, onLoadingChange]);
+
+  // Reset loading state when page is restored from bfcache (back button)
+  React.useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        setLoading(false);
+        // Limpiar flag de redirección si vuelven con el botón atrás
+        try {
+          sessionStorage.removeItem('mp_redirecting');
+        } catch {}
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    
+    // Also reset on mount just in case
+    setLoading(false);
+    try {
+      sessionStorage.removeItem('mp_redirecting');
+    } catch {}
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, []);
 
   const handleClick = async () => {
-    console.log('=== INICIO PROCESO DE PAGO ===');
-    console.log('holdId recibido:', holdId);
-    console.log('payer recibido:', payer);
-    console.log('totalAmount:', totalAmount);
-    console.log('💰 DESCUENTO - discountCode:', discountCode);
-    console.log('💰 DESCUENTO - discountAmount:', discountAmount);
-    
-    if (!holdId) {
-      const error = new Error('No se proporcionó un ID de reserva válido');
-      console.error('ERROR: holdId no válido');
-      message.error(error.message);
-      if (onError) onError(error);
+    // Prevenir múltiples clicks si ya estamos redirigiendo
+    if (sessionStorage.getItem('mp_redirecting') === 'true') {
+      message.warning('Redirigiendo a Mercado Pago, por favor espera...');
       return;
     }
 
-    // Validar formulario si se proporciona
+    console.log('=== INICIO PROCESO DE PAGO ===');
+    
+    // Turnstile temporalmente desactivado
+    /* if (captchaToken === null) {
+      message.error('Por favor completa el reCAPTCHA');
+      return;
+    } */
+    
+    // 1. Obtener datos del pagador (priorizar form si existe)
+    let currentPayer = payer;
+    
     if (form) {
       try {
         await form.validateFields();
+        const values = form.getFieldsValue();
+        currentPayer = {
+          name: values.name,
+          surname: values.surname,
+          email: values.email,
+          phone: values.phone,
+          areaCode: values.areaCode,
+          idType: values.idType,
+          idNumber: values.idNumber,
+          ...payer // Mantener otros datos que no estén en el form
+        };
       } catch (error) {
         console.error('❌ Error de validación:', error);
         message.error('Por favor completa todos los campos requeridos.');
@@ -56,9 +99,19 @@ export default function MercadoPagoButton({
       }
     }
 
-    if (!payer || !payer.email) {
+    console.log('holdId recibido:', holdId);
+    console.log('payer procesado:', currentPayer);
+    console.log('totalAmount esperado:', totalAmount);
+    
+    if (!holdId) {
+      const error = new Error('No se proporcionó un ID de reserva válido');
+      message.error(error.message);
+      if (onError) onError(error);
+      return;
+    }
+
+    if (!currentPayer || !currentPayer.email) {
       const error = new Error('Debe proporcionar información del pagador');
-      console.error('ERROR: Información del pagador inválida');
       message.error(error.message);
       if (onError) onError(error);
       return;
@@ -69,45 +122,25 @@ export default function MercadoPagoButton({
 
     try {
       // Paso 1: Crear orden con descuento opcional
-      
-      // 1) Crear ORDER desde el HOLD con descuento opcional (según guía oficial)
       const createOrderPayload = { 
         holdId: parseInt(holdId)
       };
       
-      // Agregar código de descuento si existe
-      // Enviar en AMBOS formatos para compatibilidad
       if (discountCode && discountCode.trim()) {
         const codeFormatted = discountCode.trim().toUpperCase();
-        createOrderPayload.discountCode = codeFormatted;  // camelCase
-        createOrderPayload.discount_code = codeFormatted; // snake_case
-        console.log('✅ Código de descuento agregado al payload:', codeFormatted);
-      } else {
-        console.log('⚠️ No hay código de descuento para aplicar');
+        createOrderPayload.discountCode = codeFormatted;
+        createOrderPayload.discount_code = codeFormatted;
       }
       
-      console.log('📦 Payload para crear orden:', JSON.stringify(createOrderPayload, null, 2));
-      
       const orderResp = await ordersApi.createOrder(createOrderPayload, true);
-      
-      console.log('📥 Respuesta del backend al crear orden:');
-      console.log('- orderId:', orderResp?.id || orderResp?.orderId);
-      console.log('- totalCents:', orderResp?.totalCents || orderResp?.total_cents);
-      console.log('- subtotalCents:', orderResp?.subtotalCents || orderResp?.subtotal_cents);
-      console.log('- discountApplied:', orderResp?.discount);
-      console.log('- Respuesta completa:', JSON.stringify(orderResp, null, 2));
-      
       const orderId = orderResp?.id || orderResp?.orderId || orderResp?.data?.id || orderResp?.data?.orderId;
       
       if (!orderId) {
-        console.error('ERROR: No se pudo extraer orderId de la respuesta:', orderResp);
         throw new Error('No se pudo crear la orden. Intentalo nuevamente.');
       }
 
-      // Guardar para pantallas de resultado
       try { localStorage.setItem('lastOrderId', String(orderId)); } catch {}
 
-      // Preparar backUrls con orderId para redirección después del pago
       const backUrls = {
         success: `${window.location.origin}/payment/success?orderId=${orderId}`,
         failure: `${window.location.origin}/payment/failure?orderId=${orderId}`,
@@ -115,116 +148,116 @@ export default function MercadoPagoButton({
       };
 
       const payerPayload = {
-        email: payer.email,
-        name: payer.name || 'Usuario',
-        surname: payer.surname || 'VibraTicket',
-        first_name: payer.name || 'Usuario', // compat
-        last_name: payer.surname || 'VibraTicket', // compat
+        email: currentPayer.email,
+        name: currentPayer.name || 'Usuario',
+        surname: currentPayer.surname || 'VibraTicket',
+        first_name: currentPayer.name || 'Usuario',
+        last_name: currentPayer.surname || 'VibraTicket',
         phone: {
-          area_code: String(payer.areaCode || '11'),
-          number: String(payer.phone || '1234567890')
+          area_code: String(currentPayer.areaCode || '11'),
+          number: String(currentPayer.phone || '1234567890')
         },
         identification: {
-          type: payer.idType || 'DNI',
-          number: String(payer.idNumber || '12345678')
+          type: currentPayer.idType || 'DNI',
+          number: String(currentPayer.idNumber || '12345678')
         },
-        // Campos planos adicionales por compatibilidad con backends legacy
-        areaCode: String(payer.areaCode || '11'),
-        idType: payer.idType || 'DNI',
-        idNumber: String(payer.idNumber || '12345678'),
-        ...(payer.address && {
-          address: {
-            street: payer.address,
-            number: String(payer.addressNumber || '123'),
-            zip_code: String(payer.zipCode || '1234')
-          }
-        })
+        areaCode: String(currentPayer.areaCode || '11'),
+        idType: currentPayer.idType || 'DNI',
+        idNumber: String(currentPayer.idNumber || '12345678')
       };
 
-      // 2) Crear preferencia de pago con orderId
-      // IMPORTANTE: El backend lee el descuento desde la orden.
-      // NO enviar discountAmount ni totalAmount aquí.
+      // 2) Crear preferencia de pago
       const preferencePayload = {
         orderId: parseInt(orderId),
         payer: payerPayload,
-        customerEmail: payer.email,
-        customerName: `${payer.name || 'Usuario'} ${payer.surname || 'VibraTicket'}`,
+        customerEmail: currentPayer.email,
+        customerName: `${currentPayer.name || 'Usuario'} ${currentPayer.surname || 'VibraTicket'}`,
         backUrls
       };
 
-      // El descuento ya está aplicado en la orden.
-      // El backend calculará el total correcto automáticamente.
-      
       const response = await paymentsApi.createPaymentPreference(preferencePayload, true);
       
-      // Obtener init_point (URL de redirección a MercadoPago)
-      // Intentar múltiples ubicaciones posibles en el response
       const initPoint = response?.initPoint || 
                        response?.init_point || 
                        response?.sandboxInitPoint || 
                        response?.sandbox_init_point ||
                        response?.data?.initPoint ||
                        response?.data?.init_point ||
-                       response?.data?.sandboxInitPoint ||
-                       response?.data?.sandbox_init_point ||
-                       response?.preference?.initPoint ||
-                       response?.preference?.init_point;
+                       response?.preference?.initPoint;
 
       if (!initPoint) {
-        throw new Error('No se pudo obtener el enlace de pago. Intentá nuevamente.');
+        throw new Error('No se pudo obtener el enlace de pago.');
       }
 
-      // Obtener totalAmount del backend (viene en centavos)
-      const totalAmountFromBackend = response?.totalAmount;
+      // VALIDACIÓN DE MONTO (Critical Fix)
+      const totalAmountFromBackend = response?.totalAmount; // En centavos
       
-      if (totalAmountFromBackend) {
-        const totalEnMoneda = (totalAmountFromBackend / 100).toFixed(2);
+      if (totalAmountFromBackend && totalAmount) {
+        // Backend envía centavos. Frontend tiene pesos (totalAmount).
+        // Convertir backend a pesos para comparar
+        const backendPesos = totalAmountFromBackend / 100;
         
-        // Mostrar el total final al usuario
-        loadingMessage();
-        message.success(`Total a pagar: $${totalEnMoneda}. Redirigiendo a Mercado Pago...`, 2);
-      } else {
-        // Si no viene totalAmount, usar el mensaje anterior
-        loadingMessage();
-        message.success('Redirigiendo a Mercado Pago...', 1.5);
+        // Si hay una diferencia mayor al 10% (tolerancia por redondeo), alertar
+        if (Math.abs(backendPesos - totalAmount) > (totalAmount * 0.1)) {
+          console.error(`⚠️ DISCREPANCIA DE MONTOS: Backend=$${backendPesos}, Frontend=$${totalAmount}`);
+          
+          // Detectar error de factor 100 (Backend envía $12 en vez de $1200)
+          if (Math.abs(backendPesos * 100 - totalAmount) < 5) {
+             console.warn('⚠️ Detectado posible error de centavos en backend (factor 100)');
+             // Aquí podríamos bloquear, pero el usuario quiere pagar. 
+             // Mostramos advertencia pero permitimos (o bloqueamos si es crítico).
+             // Dado que el usuario se quejó, mejor bloqueamos y avisamos.
+             loadingMessage(); // Cerrar loading
+             message.error(`Error de configuración en el servidor: El monto a cobrar ($${backendPesos}) no coincide con el total ($${totalAmount}). Por favor contactá a soporte.`);
+             setLoading(false);
+             return; 
+          }
+        }
       }
 
-      // Paso 3: Redirigir a MercadoPago
-      window.location.href = initPoint;
+      loadingMessage();
+      message.success('Redirigiendo a Mercado Pago...', 1.5);
+
+      // Paso 3: Marcar como "redirecting" y limpiar datos guardados
+      try {
+        sessionStorage.setItem('mp_redirecting', 'true');
+        // Clear saved form data since payment is starting
+        localStorage.removeItem('vibratickets_checkout_form');
+      } catch {}
+
+      // Redirigir a MercadoPago
+      setTimeout(() => {
+        window.location.href = initPoint;
+      }, 300); // Pequeño delay para que el mensaje se vea
 
     } catch (error) {
-      // Cerrar mensaje de loading
       loadingMessage();
+      console.error('Error en proceso de pago:', error);
 
       let errorMessage = 'Error al procesar el pago. Por favor, intenta nuevamente.';
 
       if (error.status === 401) {
         errorMessage = 'Usuario no autenticado. Por favor, inicia sesión.';
-      } else if (error.status === 404) {
-        errorMessage = 'Reserva/orden no encontrada o expirada.';
       } else if (error.status === 409) {
-        // Conflictos frecuentes
         if (error.response?.error === 'SeatsInOtherOrders') {
-          const seats = error.response?.seats || [];
-          const seatList = seats.map(s => s.seatId || s.id).join(', ');
-          errorMessage = `Algunos asientos ya están en otra orden activa (${seatList}). Volvé a la selección y elegí otros asientos o esperá a que la orden ${seats[0]?.blockedByOrderId || ''} se libere.`;
+           errorMessage = 'Algunos asientos ya están en otra orden activa.';
         } else if (error.response?.error === 'HoldExpired') {
-          errorMessage = 'Tu reserva temporal (HOLD) expiró. Por favor, volvé a seleccionar asientos.';
-        } else if (error.response?.error === 'HoldAlreadyUsed') {
-          errorMessage = 'El HOLD ya fue utilizado para crear una orden. Recargá la página o volvé a seleccionar asientos.';
+           errorMessage = 'Tu reserva temporal expiró.';
         } else {
-          errorMessage = 'Conflicto al crear la orden de compra. Intentá nuevamente.';
+           errorMessage = 'Conflicto al crear la orden. Intentá nuevamente.';
         }
-      } else if (error.response?.message) {
-        errorMessage = error.response.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
 
       message.error(errorMessage, 5);
-      
       if (onError) onError(error);
       setLoading(false);
+      
+      // Limpiar flag de redirección en caso de error para permitir reintentar
+      try {
+        sessionStorage.removeItem('mp_redirecting');
+      } catch {}
     }
   };
 

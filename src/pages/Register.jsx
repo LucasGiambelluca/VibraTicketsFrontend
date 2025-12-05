@@ -4,8 +4,7 @@ import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, IdcardOutlined
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { validateDNI } from '../utils/validators';
-// TEMPORAL: reCAPTCHA deshabilitado hasta tener Site Key y backend configurado
-// import ReCaptcha from '../components/ReCaptcha';
+// import Turnstile from '../components/Turnstile';
 import logo from '../assets/VibraTicketLogo2.png';
 
 const { Title, Text } = Typography;
@@ -14,14 +13,13 @@ export default function Register() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  // TEMPORAL: Estados de reCAPTCHA deshabilitados
   // const [captchaToken, setCaptchaToken] = useState(null);
   // const recaptchaRef = useRef(null);
   const navigate = useNavigate();
   const { register } = useAuth();
 
   const handleSubmit = async (values) => {
-    // TEMPORAL: Validación de reCAPTCHA deshabilitada
+    // Turnstile temporalmente desactivado
     /* if (!captchaToken) {
       message.error('Por favor completa el reCAPTCHA');
       return;
@@ -31,15 +29,13 @@ export default function Register() {
     setError(null);
     
     try {
-      // // Preparar datos del usuario según la API
       const userData = {
         email: values.email,
         password: values.password,
         name: `${values.firstName} ${values.lastName}`,
         phone: values.phone,
-        dni: values.dni, // ✅ NUEVO: DNI obligatorio
-        role: 'CUSTOMER' // Por defecto, los registros son clientes
-        // TEMPORAL: captchaToken deshabilitado
+        dni: values.dni,
+        role: 'CUSTOMER',
         // captchaToken: captchaToken
       };
       
@@ -63,30 +59,103 @@ export default function Register() {
       setError(errorMessage);
       message.error(errorMessage);
       
-      // TEMPORAL: Reset de reCAPTCHA deshabilitado
-      /* if (recaptchaRef.current) {
+      // Reset reCAPTCHA on error
+      if (recaptchaRef.current) {
         recaptchaRef.current.reset();
         setCaptchaToken(null);
-      } */
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // reCAPTCHA temporalmente deshabilitado
+  // Turnstile handlers desactivados
+  /* const handleTurnstileSuccess = (token) => {
+    setCaptchaToken(token);
+  };
+
+  const handleTurnstileError = () => {
+    setCaptchaToken(null);
+    message.error('Error al verificar Turnstile. Intenta nuevamente.');
+  };
+
+  const handleTurnstileExpire = () => {
+    setCaptchaToken(null);
+  }; */
 
   return (
-    <div style={{ 
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px'
-    }}>
-      <Row gutter={32} style={{ width: '100%', maxWidth: 1000 }}>
+    <>
+      {/* Header con botón de volver - solo en mobile */}
+      <div style={{
+        display: 'none',
+        '@media (maxWidth: 768px)': {
+          display: 'block'
+        }
+      }}>
+        <div className="mobile-register-header" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 60,
+          background: 'white',
+          borderBottom: '1px solid #e8e8e8',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          zIndex: 1000
+        }}>
+          <Button 
+            type="text" 
+            icon={<span style={{ fontSize: 20 }}>←</span>}
+            onClick={() => navigate('/login')}
+            style={{ marginRight: 16 }}
+          >
+            Volver
+          </Button>
+          <img src={logo} alt="VibraTicket" style={{ height: 32 }} />
+        </div>
+      </div>
+
+      {/* Contenedor principal */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        padding: '24px',
+        paddingTop: '40px'
+      }}
+      className="register-container"
+      >
+        <style>{`
+          @media (max-width: 768px) {
+            .register-container {
+              padding: 0 !important;
+              padding-top: 60px !important;
+              background: white !important;
+            }
+            .register-row {
+              padding: 16px !important;
+            }
+            .register-illustration {
+              display: none !important;
+            }
+            .register-card {
+              box-shadow: none !important;
+              border: none !important;
+              border-radius: 0 !important;
+            }
+            .mobile-register-header {
+              display: flex !important;
+            }
+          }
+        `}</style>
+        
+        <Row gutter={32} style={{ width: '100%', maxWidth: 1000 }} className="register-row">
         {/* Ilustración */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={12} className="register-illustration">
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -150,12 +219,15 @@ export default function Register() {
 
         {/* Formulario */}
         <Col xs={24} lg={12}>
-          <Card style={{
-            borderRadius: 16,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            border: 'none',
-            height: 'fit-content'
-          }}>
+          <Card 
+            className="register-card"
+            style={{
+              borderRadius: 16,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              border: 'none',
+              height: 'fit-content'
+            }}
+          >
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <img 
                 src={logo} 
@@ -352,11 +424,12 @@ export default function Register() {
                 </Checkbox>
               </Form.Item>
 
-              {/* TEMPORAL: reCAPTCHA v2 deshabilitado */}
-              {/* <ReCaptcha
+              {/* Cloudflare Turnstile - TEMPORALMENTE DESACTIVADO */}
+              {/* <Turnstile
                 ref={recaptchaRef}
-                onChange={handleCaptchaChange}
-                onExpired={handleCaptchaExpired}
+                onSuccess={handleTurnstileSuccess}
+                onError={handleTurnstileError}
+                onExpire={handleTurnstileExpire}
               /> */}
 
               <Form.Item style={{ marginBottom: 16 }}>
@@ -442,8 +515,8 @@ export default function Register() {
         </Col>
       </Row>
 
-      {/* Footer */}
-      <div style={{
+      {/* Footer - solo en desktop */}
+      <div className="desktop-footer" style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
@@ -451,6 +524,13 @@ export default function Register() {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         padding: '12px 24px'
       }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .desktop-footer {
+              display: none;
+            }
+          }
+        `}</style>
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
@@ -481,5 +561,6 @@ export default function Register() {
         </Row>
       </div>
     </div>
+    </>
   );
 }

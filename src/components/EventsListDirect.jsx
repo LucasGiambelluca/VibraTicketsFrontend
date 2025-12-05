@@ -13,12 +13,11 @@ export default function EventsListDirect() {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const response = await eventsApi.getEvents({
+        const response = await eventsApi.getPublicEvents({
           page: 1,
           limit: 6,
-          status: 'active',
-          sortBy: 'created_at',
-          sortOrder: 'DESC'
+          sortBy: 'next_show_date',
+          sortOrder: 'ASC'
         });
         
         if (response && response.events) {

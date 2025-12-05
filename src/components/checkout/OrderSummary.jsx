@@ -111,8 +111,9 @@ const OrderSummary = ({ event, show, seats, holdData, subtotal, serviceCharge, d
               dataSource={sectionSeats}
               renderItem={(seat) => {
                 const price = seat.price || seat.price_cents || 0;
+                // Prices always come in cents, so divide by 100
                 const priceDisplay = typeof price === 'number' 
-                  ? (price > 100000 ? price / 100 : price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  ? (price / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                   : '0,00';
 
                 return (

@@ -5,6 +5,7 @@ import { message } from 'antd';
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 30000,
+  withCredentials: true, // IMPORTANTE: Enviar cookies en cada petición
   headers: {
     'Content-Type': 'application/json'
   }
@@ -13,10 +14,8 @@ const instance = axios.create({
 // Interceptor para agregar token de autenticación
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Ya no necesitamos inyectar el token manualmente desde localStorage
+    // El navegador enviará la cookie httpOnly automáticamente
     
     // Log de desarrollo (solo en dev)
     if (import.meta.env.DEV) {
@@ -61,9 +60,7 @@ instance.interceptors.response.use(
           break;
           
         case 401:
-          // Unauthorized - limpiar token y redirigir a login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          // Unauthorized - redirigir a login
           message.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
           // Redirigir a login después de un pequeño delay
           setTimeout(() => {

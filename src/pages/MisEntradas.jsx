@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Empty, Button, Typography, Tag, Space, message, Input, Spin, Divider } from 'antd';
+import { Row, Col, Card, Empty, Button, Typography, Tag, Space, message, Input, Spin, Divider, Alert } from 'antd';
 import { CalendarOutlined, EnvironmentOutlined, QrcodeOutlined, SearchOutlined, FilterOutlined, CloseCircleOutlined, DownloadOutlined, TagOutlined, LockOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { usersApi, testPaymentsApi } from '../services/apiService';
@@ -90,8 +90,81 @@ export default function MisEntradas() {
     loadTickets();
   }, [isAuthenticated, user]);
 
+  // 🔔 Polling for real-time ticket status updates (chargebacks, etc.)
+  useEffect(() => {
+    if (!isAuthenticated || tickets.length === 0) {
+      return;
+    }
+
+    // Poll every 10 seconds for ticket updates
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log('🔄 Polling for ticket updates...');
+        
+        let ticketsData = [];
+        
+        // Use same loading logic as initial load
+        try {
+          const response = await usersApi.getMyTickets();
+          if (response?.tickets) {
+            ticketsData = response.tickets;
+          } else if (Array.isArray(response)) {
+            ticketsData = response;
+          } else if (response?.data) {
+            ticketsData = response.data;
+          }
+        } catch (error) {
+          console.error('⚠️ Error polling tickets:', error);
+          return; // Don't update state if poll fails
+        }
+
+        // Check if any tickets changed status (especially CANCELLED)
+        const cancelledTickets = ticketsData.filter(
+          t => t.status === 'CANCELLED'
+        );
+        const previousCancelledCount = tickets.filter(
+          t => t.status === 'CANCELLED'
+        ).length;
+
+        if (cancelledTickets.length > previousCancelledCount) {
+          // New cancellation detected
+          const newCancelledCount = cancelledTickets.length - previousCancelledCount;
+          message.warning({
+            content: `🚨 ${newCancelledCount} ticket(s) ${newCancelledCount > 1 ? 'were' : 'was'} cancelled`,
+            duration: 10,
+          });
+        }
+
+        // Update tickets
+        setTickets(ticketsData);
+
+      } catch (error) {
+        console.error('❌ Polling error:', error);
+      }
+    }, 10000); // Poll every 10 seconds
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => {
+      clearInterval(pollInterval);
+      console.log('🛑 Stopped polling ticket updates');
+    };
+  }, [isAuthenticated, tickets, usersApi]);
+
   // Filtrar tickets
   const filteredTickets = tickets.filter(ticket => {
+    // Filtro de eventos pasados
+    const showDateStr = ticket.show_date || ticket.showDate;
+    if (showDateStr) {
+      const showDate = new Date(showDateStr);
+      const now = new Date();
+      // Si el evento ya pasó (ayer o antes), no mostrarlo
+      // Damos un margen de 24hs post-evento para que aún se vea el día del show
+      const oneDayAfter = new Date(showDate);
+      oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+      
+      if (now > oneDayAfter) return false;
+    }
+
     // Filtro por estado
     if (filter === 'issued' && ticket.status !== 'ISSUED') return false;
     if (filter === 'redeemed' && ticket.status !== 'REDEEMED') return false;
@@ -170,6 +243,15 @@ export default function MisEntradas() {
       </div>
 
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px' }}>
+        {/* Security Warning */}
+        <Alert
+          message="IMPORTANTE: Seguridad de tus Entradas"
+          description="Por seguridad, tus códigos QR definitivos se habilitarán en esta pantalla 48 horas antes del inicio del evento."
+          type="warning"
+          showIcon
+          icon={<LockOutlined />}
+          style={{ marginBottom: 24, border: '1px solid #faad14' }}
+        />
         {/* Loading State */}
         {loading && (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -262,11 +344,23 @@ export default function MisEntradas() {
             {filteredTickets.map((ticket) => {
               const eventName = ticket.event_name || ticket.eventName || 'Evento';
               const venue = ticket.venue || 'Venue';
-              const showDate = ticket.show_date || ticket.showDate;
+              const showDateStr = ticket.show_date || ticket.showDate;
               const sector = ticket.sector || 'General';
               const seatNumber = ticket.seat_number || ticket.seatNumber || '';
               const status = ticket.status || 'ISSUED';
               
+              // Calcular si faltan más de 48hs
+              let isTooEarlyForQR = false;
+              if (showDateStr) {
+                const showDate = new Date(showDateStr);
+                const now = new Date();
+                const diffMs = showDate - now;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                if (diffHours > 48) {
+                  isTooEarlyForQR = true;
+                }
+              }
+
               // Imagen
               let imageUrl;
               if (ticket.event && typeof ticket.event === 'object') {
@@ -278,16 +372,21 @@ export default function MisEntradas() {
                 imageUrl = `https://via.placeholder.com/400x200/667eea/ffffff?text=${encodeURIComponent(eventName)}`;
               }
 
+              const linkId = ticket.ticket_number || ticket.ticketNumber || ticket.id;
+
+              const isBlocked = status === 'CANCELLED';
+
               return (
                 <div key={ticket.id} className="ticket-card" style={{
                   display: 'flex',
-                  background: 'white',
+                  background: isBlocked ? '#fff1f0' : 'white',
                   borderRadius: 16,
                   overflow: 'hidden',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   position: 'relative',
-                  border: '1px solid #f0f0f0'
+                  border: isBlocked ? '2px solid #ff4d4f' : '1px solid #f0f0f0',
+                  opacity: isBlocked ? 0.9 : 1
                 }}>
                   {/* Left: Image (Desktop only or small on mobile) */}
                   <div style={{ 
@@ -295,7 +394,8 @@ export default function MisEntradas() {
                     minWidth: 180,
                     background: `url(${imageUrl}) center/cover no-repeat`,
                     position: 'relative',
-                    display: window.innerWidth < 576 ? 'none' : 'block' // Hide on very small screens if needed, but better to use CSS media queries
+                    display: window.innerWidth < 576 ? 'none' : 'block',
+                    filter: isBlocked ? 'grayscale(100%)' : 'none'
                   }}>
                     <div style={{
                       position: 'absolute',
@@ -315,28 +415,36 @@ export default function MisEntradas() {
                   {/* Middle: Info */}
                   <div style={{ flex: 1, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <Title level={4} style={{ margin: 0, fontSize: '1.2rem' }}>{eventName}</Title>
+                      <Title level={4} style={{ margin: 0, fontSize: '1.2rem', color: isBlocked ? '#cf1322' : 'inherit' }}>
+                        {eventName} {isBlocked && '(BLOQUEADO)'}
+                      </Title>
                       <Tag color={getStatusColor(status)} style={{ borderRadius: 12, marginRight: 0 }}>
                         {getStatusText(status)}
                       </Tag>
                     </div>
                     
-                    <Space direction="vertical" size={4} style={{ marginBottom: 16 }}>
-                      <Space>
-                        <CalendarOutlined style={{ color: '#667eea' }} />
-                        <Text type="secondary">
-                          {showDate ? format(new Date(showDate), "dd 'de' MMMM, yyyy • HH:mm'hs'", { locale: es }) : 'Fecha por confirmar'}
-                        </Text>
+                    {isBlocked ? (
+                      <div style={{ color: '#cf1322', fontWeight: 'bold', margin: '8px 0' }}>
+                        🚫 TICKET ANULADO POR CONTRACARGO
+                      </div>
+                    ) : (
+                      <Space direction="vertical" size={4} style={{ marginBottom: 16 }}>
+                        <Space>
+                          <CalendarOutlined style={{ color: '#667eea' }} />
+                          <Text type="secondary">
+                            {showDateStr ? format(new Date(showDateStr), "dd 'de' MMMM, yyyy • HH:mm'hs'", { locale: es }) : 'Fecha por confirmar'}
+                          </Text>
+                        </Space>
+                        <Space>
+                          <EnvironmentOutlined style={{ color: '#667eea' }} />
+                          <Text type="secondary">{venue}</Text>
+                        </Space>
+                        <Space>
+                          <TagOutlined style={{ color: '#667eea' }} />
+                          <Text strong>{sector} {seatNumber && `• Asiento ${seatNumber}`}</Text>
+                        </Space>
                       </Space>
-                      <Space>
-                        <EnvironmentOutlined style={{ color: '#667eea' }} />
-                        <Text type="secondary">{venue}</Text>
-                      </Space>
-                      <Space>
-                        <TagOutlined style={{ color: '#667eea' }} />
-                        <Text strong>{sector} {seatNumber && `• Asiento ${seatNumber}`}</Text>
-                      </Space>
-                    </Space>
+                    )}
                   </div>
 
                   {/* Right: Action (Dashed border separator) */}
@@ -348,9 +456,19 @@ export default function MisEntradas() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     minWidth: 160,
-                    background: '#fafafa'
+                    background: isBlocked ? '#fff1f0' : '#fafafa'
                   }}>
-                    {ticket.availability_status === 'pending' ? (
+                    {isBlocked ? (
+                      <>
+                        <CloseCircleOutlined style={{ fontSize: 32, color: '#ff4d4f', marginBottom: 8 }} />
+                        <Text strong style={{ color: '#ff4d4f', textAlign: 'center' }}>NO VÁLIDO</Text>
+                        <Link to={`/ticket/${linkId}`} style={{ width: '100%', marginTop: 8 }}>
+                          <Button danger size="middle" block>
+                            Ver Motivo
+                          </Button>
+                        </Link>
+                      </>
+                    ) : ticket.availability_status === 'pending' ? (
                       <>
                         <div style={{ 
                           background: '#f6ffed', 
@@ -365,7 +483,36 @@ export default function MisEntradas() {
                         <Text strong style={{ color: '#52c41a', fontSize: 13, marginBottom: 8, textAlign: 'center' }}>
                           Lugar Asegurado
                         </Text>
-                        <Link to={`/ticket/${ticket.ticket_number}`} style={{ width: '100%' }}>
+                        <Link to={`/ticket/${linkId}`} style={{ width: '100%' }}>
+                          <Button 
+                            size="middle"
+                            block
+                            style={{ borderRadius: 8 }}
+                          >
+                            Ver Detalle
+                          </Button>
+                        </Link>
+                      </>
+                    ) : isTooEarlyForQR ? (
+                      // 🔒 ESTADO: Faltan más de 48hs
+                      <>
+                        <div style={{ 
+                          background: '#fff7e6', 
+                          border: '1px solid #ffd591',
+                          borderRadius: '50%',
+                          width: 48, height: 48,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: 12
+                        }}>
+                          <LockOutlined style={{ fontSize: 24, color: '#faad14' }} />
+                        </div>
+                        <Text strong style={{ color: '#faad14', fontSize: 13, marginBottom: 4, textAlign: 'center' }}>
+                          QR Protegido
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 11, textAlign: 'center', marginBottom: 8, lineHeight: 1.2 }}>
+                          Se habilitará 48hs antes del evento
+                        </Text>
+                        <Link to={`/ticket/${linkId}`} style={{ width: '100%' }}>
                           <Button 
                             size="middle"
                             block
@@ -377,7 +524,7 @@ export default function MisEntradas() {
                       </>
                     ) : (
                       <>
-                        <Link to={`/ticket/${ticket.ticket_number}`} style={{ width: '100%' }}>
+                        <Link to={`/ticket/${linkId}`} style={{ width: '100%' }}>
                           <Button 
                             type="primary" 
                             icon={<QrcodeOutlined />} 

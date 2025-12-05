@@ -43,19 +43,51 @@ const VirtualQueue = ({ showId, onAccessGranted }) => {
     try {
       const response = await queueApi.joinQueue(showId, user.email);
       
+      // Si la respuesta incluye accessToken, es acceso directo
+      if (response.accessToken || response.data?.accessToken) {
+        const token = response.accessToken || response.data?.accessToken;
+        setQueueState(prev => ({
+          ...prev,
+          accessToken: token,
+          inQueue: false,
+          loading: false
+        }));
+        
+        sessionStorage.setItem(`queue_access_${showId}`, token);
+        if (onAccessGranted) onAccessGranted(token);
+        message.success('¡Acceso concedido inmediatamente!');
+        return;
+      }
+
+      // Sanitize position to avoid "Objects are not valid as a React child"
+      let pos = response.position || response.data?.position;
+      if (typeof pos === 'object') {
+        pos = null; // O extraer un valor si es posible
+      }
+
       setQueueState(prev => ({
         ...prev,
         inQueue: true,
-        position: response.data.position,
-        queueSize: response.data.queueSize,
-        estimatedWaitTime: response.data.estimatedWaitTime,
-        sessionId: response.data.sessionId,
+        position: pos,
+        queueSize: response.queueSize || response.data?.queueSize,
+        estimatedWaitTime: response.estimatedWaitTime || response.data?.estimatedWaitTime,
+        sessionId: response.sessionId || response.data?.sessionId,
         loading: false
       }));
 
       message.success('Te has unido a la cola virtual');
     } catch (error) {
-      const errorMsg = error.response?.data?.message || 'Error al unirse a la cola';
+      const rawError = error.response?.data?.message;
+      
+      // Si el error es 409 (Conflict), significa que ya está en la cola
+      if (error.response?.status === 409 || (rawError && rawError.includes('already in queue'))) {
+        console.log('User already in queue (409), recovering state...');
+        await updatePosition(); // Recuperar posición actual
+        setQueueState(prev => ({ ...prev, inQueue: true, loading: false }));
+        return;
+      }
+
+      const errorMsg = typeof rawError === 'object' ? JSON.stringify(rawError) : (rawError || 'Error al unirse a la cola');
       setQueueState(prev => ({ ...prev, loading: false, error: errorMsg }));
       message.error(errorMsg);
     }
@@ -68,15 +100,18 @@ const VirtualQueue = ({ showId, onAccessGranted }) => {
     try {
       const response = await queueApi.getPosition(showId);
       
+      let pos = response.position || response.data?.position;
+      if (typeof pos === 'object') pos = null;
+
       setQueueState(prev => ({
         ...prev,
-        position: response.data.position,
-        queueSize: response.data.queueSize,
-        estimatedWaitTime: response.data.estimatedWaitTime
+        position: pos,
+        queueSize: response.queueSize || response.data?.queueSize,
+        estimatedWaitTime: response.estimatedWaitTime || response.data?.estimatedWaitTime
       }));
 
       // Si estamos en posición 1, intentar reclamar acceso
-      if (response.data.position === 1) {
+      if ((response.position || response.data?.position) === 1) {
         await claimAccess();
       }
     } catch (error) {
@@ -93,19 +128,19 @@ const VirtualQueue = ({ showId, onAccessGranted }) => {
       
       setQueueState(prev => ({
         ...prev,
-        accessToken: response.data.accessToken,
+        accessToken: response.accessToken || response.data?.accessToken,
         position: 0
       }));
 
       message.success('¡Acceso otorgado! Puedes proceder con tu compra', 5);
 
-      // Guardar token en localStorage para el checkout
-      localStorage.setItem(`queue_access_${showId}`, response.data.accessToken);
-      localStorage.setItem(`queue_access_${showId}_expires`, response.data.expiresAt);
+      // Guardar token en sessionStorage para el checkout
+      sessionStorage.setItem(`queue_access_${showId}`, response.accessToken || response.data?.accessToken);
+      sessionStorage.setItem(`queue_access_${showId}_expires`, response.expiresAt || response.data?.expiresAt);
 
       // Callback para el componente padre
       if (onAccessGranted) {
-        onAccessGranted(response.data.accessToken);
+        onAccessGranted(response.accessToken || response.data?.accessToken);
       }
     } catch (error) {
       console.error('Error reclamando acceso:', error);
@@ -133,6 +168,34 @@ const VirtualQueue = ({ showId, onAccessGranted }) => {
       message.error('Error al salir de la cola');
     }
   };
+
+  // Verificar estado inicial al montar
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (queueState.inQueue || queueState.accessToken) return;
+      
+      try {
+        const response = await queueApi.getPosition(showId);
+        // Si obtenemos posición, es que ya estamos en la cola
+        let pos = response.position || response.data?.position;
+        if (typeof pos === 'object') pos = null;
+
+        setQueueState(prev => ({
+          ...prev,
+          inQueue: true,
+          position: pos,
+          queueSize: response.queueSize || response.data?.queueSize,
+          estimatedWaitTime: response.estimatedWaitTime || response.data?.estimatedWaitTime,
+          loading: false
+        }));
+      } catch (error) {
+        // Si no está en la cola, no hacemos nada (se queda en estado inicial)
+        console.log('User not in queue or error checking status:', error);
+      }
+    };
+
+    checkStatus();
+  }, [showId]);
 
   // Polling automático
   useEffect(() => {

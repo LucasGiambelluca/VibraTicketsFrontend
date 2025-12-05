@@ -238,18 +238,7 @@ export default function LoginModal() {
           </Text>
         </div>
         
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
-          <Text style={{ color: '#999', fontSize: '13px' }}>
-            ¿Eres staff?{' '}
-            <Link 
-              to="/adminlogin" 
-              onClick={handleCancel}
-              style={{ color: '#999', textDecoration: 'underline' }}
-            >
-              Ingresá aquí
-            </Link>
-          </Text>
-        </div>
+
       </Form>
     </Modal>
   );

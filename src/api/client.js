@@ -10,25 +10,21 @@ class ApiClient {
   async request(endpoint, config = {}) {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Obtener token del localStorage
-    const token = localStorage.getItem('token');
-    
-    // Preparar headers con JWT si existe
+    // Preparar headers
     const headers = {
       'ngrok-skip-browser-warning': 'true', // Para producción con Ngrok
       ...config.headers
     };
     
-    // Agregar token JWT si existe
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+    // Configuración para incluir cookies
+    const fetchConfig = {
+      ...config,
+      headers,
+      credentials: 'include' // IMPORTANTE: Enviar cookies en cada petición
+    };
     
     try {
-      const response = await fetch(url, {
-        ...config,
-        headers
-      });
+      const response = await fetch(url, fetchConfig);
       
       // Verificar si la respuesta es válida
       if (!response.ok) {
@@ -43,12 +39,12 @@ class ApiClient {
         }
         
         // Manejo especial de error 401 (token expirado/inválido)
-        // IMPORTANTE: Solo limpiar localStorage y redirigir si NO es un intento de login
-        if (response.status === 401 && !endpoint.includes('/auth/login')) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          // Solo redirigir si no estamos ya en la página de login
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        if (response.status === 401 && !endpoint.includes('/auth/') && !endpoint.includes('/users/me')) {
+          // El navegador manejará la cookie, solo redirigir si es necesario
+          // Evitar redirect loop si ya estamos en páginas de login
+          const isAuthPage = ['/login', '/customerlogin', '/adminlogin', '/register'].some(path => window.location.pathname.startsWith(path));
+          
+          if (!isAuthPage && window.location.pathname !== '/') {
             window.location.href = '/login';
           }
         }
@@ -156,6 +152,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 segundos según la guía
+  withCredentials: true, // IMPORTANTE: Enviar cookies
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true' // Para producción con Ngrok
@@ -163,18 +160,10 @@ const api = axios.create({
 });
 
 // ============================================
-// INTERCEPTOR DE REQUEST - Agregar JWT Token
+// INTERCEPTOR DE REQUEST - (Ya no es necesario inyectar token)
 // ============================================
 api.interceptors.request.use(
   (config) => {
-    // Obtener token del localStorage
-    const token = localStorage.getItem('token');
-    
-    if (token) {
-      // Agregar token al header Authorization
-      config.headers.Authorization = `Bearer ${token}`;
-      }
-    
     return config;
   },
   (error) => {
@@ -196,22 +185,19 @@ api.interceptors.response.use(
       const { status, data, config } = error.response;
       
       // Error 401: Token expirado o inválido
-      // IMPORTANTE: Solo limpiar y redirigir si NO es un intento de login
-      if (status === 401) {
-        const isLoginAttempt = config?.url?.includes('/auth/login') || config?.url?.includes('/auth/register');
-        
-        if (!isLoginAttempt) {
-          // Limpiar localStorage solo si no es un intento de login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+      // IMPORTANTE: Solo limpiar y redirigir si NO es un intento de login o verificación de sesión
+        if (status === 401) {
+          const isAuthEndpoint = config?.url?.includes('/auth/') || config?.url?.includes('/users/me');
           
-          // Redirigir al login solo si no estamos ya ahí
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            window.location.href = '/login';
+          if (!isAuthEndpoint) {
+            // Redirigir al login solo si no estamos ya ahí
+            const isAuthPage = ['/login', '/customerlogin', '/adminlogin', '/register'].some(path => window.location.pathname.startsWith(path));
+            
+            if (!isAuthPage && window.location.pathname !== '/') {
+              window.location.href = '/login';
+            }
           }
         }
-        // Si es un intento de login fallido, simplemente rechazar el error sin redirigir
-      }
       
       // Error 403: Sin permisos
       else if (status === 403) {

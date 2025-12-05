@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Carousel, Button, Spin } from 'antd';
-import { RightOutlined } from '@ant-design/icons';
+import { Calendar, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { homepageBannersApi } from '../services/apiService';
 import { getImageUrl as getImageUtilUrl } from '../utils/imageUtils';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vibratickets.online';
+
 
 const HomeBannerCarousel = () => {
   const [banners, setBanners] = useState([]);
@@ -20,9 +20,7 @@ const HomeBannerCarousel = () => {
     try {
       console.log('🔄 Cargando banners...');
       const response = await homepageBannersApi.getActiveBanners();
-      console.log('✅ Respuesta de banners:', response);
       
-      // Manejo flexible de la respuesta
       let bannersList = [];
       
       if (Array.isArray(response)) {
@@ -35,28 +33,28 @@ const HomeBannerCarousel = () => {
         bannersList = response.data.banners;
       }
       
-      console.log('📋 Banners procesados:', bannersList);
-      
-      // Si hay banners, usarlos; si no, usar placeholder
       if (bannersList.length > 0) {
         setBanners(bannersList);
       } else {
-        console.log('⚠️ No hay banners activos, usando placeholder');
+        // Placeholder con datos de ejemplo
         setBanners([{
           id: 0,
           title: 'Descubre los mejores eventos',
           description: 'Conciertos, festivales y más',
+          event_date: 'Próximamente',
+          venue: 'Múltiples ubicaciones',
           image_url: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2070&auto=format&fit=crop',
           link_type: 'none'
         }]);
       }
     } catch (error) {
       console.error('❌ Error al cargar banners:', error);
-      // Si falla, usar banner por defecto
       setBanners([{
         id: 0,
         title: 'Descubre los mejores eventos',
         description: 'Conciertos, festivales y más',
+        event_date: 'Próximamente',
+        venue: 'Múltiples ubicaciones',
         image_url: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2070&auto=format&fit=crop',
         link_type: 'none'
       }]);
@@ -73,7 +71,6 @@ const HomeBannerCarousel = () => {
     }
   };
 
-  // Usar la función centralizada para obtener URL completa de la imagen
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2070&auto=format&fit=crop';
     return getImageUtilUrl(imageUrl, 'Banner');
@@ -83,11 +80,11 @@ const HomeBannerCarousel = () => {
     return (
       <div style={{
         width: '100%',
-        height: '600px',
+        height: '400px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f0f2f5'
+        background: 'var(--bg-secondary)'
       }}>
         <Spin size="large" />
       </div>
@@ -95,51 +92,127 @@ const HomeBannerCarousel = () => {
   }
 
   if (banners.length === 0) {
-    return (
-      <div style={{
-        width: '100%',
-        height: '600px',
-        backgroundImage: 'url(https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=2070&auto=format&fit=crop)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }} />
-    );
+    return null;
   }
 
   return (
-    <Carousel 
-      autoplay 
-      autoplaySpeed={20000}
-      effect="fade"
-      dots={{ className: 'custom-carousel-dots' }}
-      style={{ width: '100%' }}
-    >
-      {banners.map((banner) => (
-        <div key={banner.id}>
-          <div
-            style={{
-              width: '100%',
-              height: '600px',
-              backgroundImage: `url(${getImageUrl(banner.image_url)})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              position: 'relative',
-              cursor: banner.link_type !== 'none' ? 'pointer' : 'default',
-              transition: 'transform 0.5s ease'
-            }}
-            onClick={() => handleBannerClick(banner)}
-            onMouseEnter={(e) => {
-              if (banner.link_type !== 'none') {
-                e.currentTarget.style.transform = 'scale(1.02)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          />
-        </div>
-      ))}
-    </Carousel>
+    <div style={{
+      width: '100%',
+      maxWidth: 1400,
+      margin: '0 auto',
+      padding: '0 40px 60px'
+    }}>
+      <Carousel 
+        autoplay 
+        autoplaySpeed={5000}
+        dots={true}
+        style={{ 
+          borderRadius: 'var(--border-radius)',
+          overflow: 'hidden'
+        }}
+      >
+        {banners.map((banner) => (
+          <div key={banner.id}>
+            <div
+              style={{
+                width: '100%',
+                height: '400px',
+                backgroundImage: `url(${getImageUrl(banner.image_url)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                position: 'relative',
+                cursor: banner.link_type !== 'none' ? 'pointer' : 'default',
+                borderRadius: 'var(--border-radius)',
+                overflow: 'hidden'
+              }}
+              onClick={() => handleBannerClick(banner)}
+            >
+              {/* Overlay gradient */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '60%',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)',
+                display: 'flex',
+                alignItems: 'flex-end',
+                padding: '40px'
+              }}>
+                {/* Event Info */}
+                <div style={{
+                  color: 'white',
+                  maxWidth: '600px'
+                }}>
+                  <h2 style={{
+                    fontSize: '2.5rem',
+                    fontWeight: 700,
+                    margin: '0 0 16px 0',
+                    color: 'white',
+                    textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}>
+                    {banner.title}
+                  </h2>
+                  
+                  {banner.description && (
+                    <p style={{
+                      fontSize: '1.1rem',
+                      margin: '0 0 20px 0',
+                      color: 'rgba(255,255,255,0.9)',
+                      fontWeight: 400
+                    }}>
+                      {banner.description}
+                    </p>
+                  )}
+                  
+                  <div style={{
+                    display: 'flex',
+                    gap: '24px',
+                    marginBottom: '20px',
+                    flexWrap: 'wrap'
+                  }}>
+                    {banner.event_date && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Calendar size={16} />
+                        <span style={{ fontSize: '0.95rem' }}>{banner.event_date}</span>
+                      </div>
+                    )}
+                    {banner.venue && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={16} />
+                        <span style={{ fontSize: '0.95rem' }}>{banner.venue}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {banner.link_type !== 'none' && (
+                    <Button
+                      type="primary"
+                      size="large"
+                      style={{
+                        background: 'white',
+                        color: 'var(--primary-color)',
+                        border: 'none',
+                        borderRadius: 'var(--border-radius-sm)',
+                        fontWeight: 600,
+                        height: '48px',
+                        padding: '0 32px'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBannerClick(banner);
+                      }}
+                    >
+                      Ingresar para comprar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </Carousel>
+    </div>
   );
 };
 
