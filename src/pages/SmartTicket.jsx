@@ -6,7 +6,7 @@ import { useParams, Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { testPaymentsApi, ticketsApi } from '../services/apiService';
+import { ticketsApi } from '../services/apiService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import logo from '../assets/VibraTicketLogo2.png';
@@ -28,22 +28,19 @@ export default function SmartTicket() {
     const loadTicket = async () => {
       try {
         setLoading(true);
-        // Estrategia 1: Intentar obtener ticket específico
+        // Estrategia 1: Intentar obtener ticket específico usando API de producción
         try {
-          if (!testPaymentsApi) {
-            console.error('❌ testPaymentsApi is undefined');
-            throw new Error('API Service unavailable');
-          }
           console.log('🔍 Fetching ticket detail for:', ticketId);
-          const response = await testPaymentsApi.getTicketDetail(ticketId);
+          const response = await ticketsApi.getTicketByNumber(ticketId);
           const ticket = response?.data?.ticket || response?.ticket || response;
           setTicketData(ticket);
           return;
         } catch (detailError) {
-          }
+          console.log('⚠️ No se pudo obtener ticket por número, intentando lista de tickets');
+        }
         
         // Estrategia 2: Obtener todos los tickets y filtrar
-        const response = await testPaymentsApi.getMyTickets();
+        const response = await ticketsApi.getMyTickets();
         const allTickets = response?.data?.tickets || response?.tickets || [];
         const ticket = allTickets.find(t => 
           t.ticket_number === ticketId || 

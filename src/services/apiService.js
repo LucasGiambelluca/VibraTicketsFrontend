@@ -619,6 +619,19 @@ export const ticketsApi = {
   // RUTA: GET /api/tickets/:ticketId/dynamic-qr
   getDynamicQR: (ticketId) => {
     return apiClient.get(`${API_BASE}/tickets/${ticketId}/dynamic-qr`);
+  },
+
+  // Obtener detalle de un ticket por número (PRODUCCIÓN)
+  // RUTA: GET /api/tickets/:ticketNumber
+  getTicketByNumber: (ticketNumber) => {
+    return apiClient.get(`${API_BASE}/tickets/${ticketNumber}`);
+  },
+
+  // Obtener mis tickets (PRODUCCIÓN)
+  // RUTA: GET /api/tickets/my-tickets
+  getMyTickets: (email = null) => {
+    const params = email ? { email } : {};
+    return apiClient.get(`${API_BASE}/tickets/my-tickets`, params);
   }
 };
 
