@@ -253,6 +253,11 @@ export const eventsApi = {
     return apiClient.get(`${API_BASE}/events/${eventId}`);
   },
 
+  // Obtener disponibilidad unificada (detecta automáticamente el sistema)
+  getEventAvailability: (eventId) => {
+    return apiClient.get(`${API_BASE}/events/${eventId}/availability`);
+  },
+
   // Obtener tipos de tickets de un evento
   getEventTicketTypes: (eventId) => {
     return apiClient.get(`${API_BASE}/events/${eventId}/ticket-types`);

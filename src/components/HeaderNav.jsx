@@ -148,8 +148,43 @@ export default function HeaderNav() {
         </Link>
       </div>
 
-      {/* Espaciador */}
-      <div style={{ flex: 1 }} />
+      {/* Search Bar - Centro */}
+      {screens.md && (
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 32px' }}>
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: '#f5f5f5',
+              borderRadius: 999,
+              padding: '8px 20px',
+              width: '100%',
+              maxWidth: 420,
+              border: '1px solid #e8e8e8',
+              cursor: 'pointer',
+              transition: 'border-color 0.2s, box-shadow 0.2s'
+            }}
+            onClick={() => navigate('/events')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#bbb';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#e8e8e8';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 12, flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span style={{ color: '#999', fontSize: '0.95rem', fontWeight: 400 }}>Buscar eventos...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer for mobile */}
+      {!screens.md && <div style={{ flex: 1 }} />}
 
       {/* Botones de usuario / Hamburger Mobile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

@@ -30,6 +30,7 @@ export default function EventDetail() {
   const { user } = useAuth();
   const [event, setEvent] = useState(null);
   const [shows, setShows] = useState([]);
+  const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isLoaded: mapsLoaded } = useGoogleMaps();
@@ -73,7 +74,24 @@ export default function EventDetail() {
         const eventResponse = await eventsApi.getEvent(eventId);
         if (eventResponse) {
           setEvent(eventResponse);
-          setShows(eventResponse.shows || []);
+          
+          // 2. Cargar disponibilidad detallada
+          try {
+            const availResponse = await eventsApi.getEventAvailability(eventId);
+            setAvailability(availResponse);
+            
+            if (availResponse.type === 'SEATED') {
+              setShows(availResponse.shows || []);
+            } else if (availResponse.type === 'GENERAL_ADMISSION') {
+              // En Modelo 2, el frontend puede necesitar llamar a otro endpoint para reservar
+              // o usar los ticketTypes directamente retornados por el endpoint unificado
+              setShows([]);
+            }
+          } catch (availErr) {
+            console.error('⚠️ Error cargando disponibilidad unificada:', availErr);
+            // Fallback: usar shows del evento si existen
+            setShows(eventResponse.shows || []);
+          }
         } else {
           throw new Error('Evento no encontrado');
         }
@@ -414,7 +432,56 @@ export default function EventDetail() {
             }}>
               <Title level={4} style={{ marginBottom: 24 }}>Seleccioná tu función</Title>
               
-              {event.sale_start_date && new Date(event.sale_start_date) > new Date() ? (
+              {availability?.type === 'GENERAL_ADMISSION' ? (
+                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  {availability.ticketTypes?.map((type) => (
+                    <div 
+                      key={type.id}
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        padding: 16,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <Row justify="space-between" align="middle">
+                        <Col span={16}>
+                          <Text strong style={{ fontSize: '1rem', display: 'block' }}>
+                            {type.name}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: '0.9rem' }}>
+                            {type.description}
+                          </Text>
+                          <div style={{ marginTop: 4 }}>
+                            <Text strong style={{ color: 'var(--accent-color)', fontSize: '1.1rem' }}>
+                              ${type.price.toLocaleString('es-AR')}
+                            </Text>
+                          </div>
+                        </Col>
+                        <Col span={8} style={{ textAlign: 'right' }}>
+                          <Button 
+                            type="primary" 
+                            size="large"
+                            disabled={!type.isOnSale || type.available <= 0}
+                            onClick={() => navigate(`/tickets/reserve/${eventId}`)}
+                            style={{
+                              background: 'black',
+                              borderColor: 'black',
+                              height: 40,
+                              borderRadius: 8
+                            }}
+                          >
+                            {type.available <= 0 ? 'Agotado' : 'Comprar'}
+                          </Button>
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
+                  {(!availability.ticketTypes || availability.ticketTypes.length === 0) && (
+                    <Text type="secondary">No hay tickets disponibles para este evento.</Text>
+                  ) }
+                </Space>
+              ) : event.sale_start_date && new Date(event.sale_start_date) > new Date() ? (
                 <div style={{ 
                   textAlign: 'center', 
                   padding: '32px 16px',
