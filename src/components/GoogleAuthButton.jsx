@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../services/apiService';
+
+// Client ID cargado en runtime desde /config/public (configurable desde el
+// panel admin sin rebuild). Cache simple a nivel módulo.
+let cachedClientId;
 
 /**
  * Componente para autenticación con Google
@@ -12,11 +16,23 @@ import { authApi } from '../services/apiService';
 const GoogleAuthButton = ({ onSuccess, onError, style, text = "Continuar con Google" }) => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const [clientId, setClientId] = useState(cachedClientId);
 
-  // Verificar que existe el Client ID
+  useEffect(() => {
+    if (cachedClientId !== undefined) return;
+    authApi.getPublicConfig()
+      .then((cfg) => {
+        cachedClientId = cfg?.googleClientId || null;
+        setClientId(cachedClientId);
+      })
+      .catch(() => {
+        cachedClientId = null;
+        setClientId(null);
+      });
+  }, []);
+
+  // Sin Client ID configurado (o cargando): no renderizar el botón
   if (!clientId) {
-    console.error('❌ VITE_GOOGLE_CLIENT_ID no está configurado en .env');
     return null;
   }
 

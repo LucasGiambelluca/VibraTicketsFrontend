@@ -35,6 +35,11 @@ export const authApi = {
     return apiClient.post(`${API_BASE}/auth/google`, data);
   },
 
+  // Config pública de la plataforma (sin auth): { googleClientId }
+  getPublicConfig: () => {
+    return apiClient.get(`${API_BASE}/config/public`);
+  },
+
   // OAuth - Facebook Login
   facebookLogin: (data) => {
     // data: { accessToken: "facebook-access-token", userID: "facebook-user-id" }
@@ -879,6 +884,10 @@ export const venuesApi = {
   deleteVenue: (venueId) => {
     return apiClient.delete(`${API_BASE}/venues/${venueId}`);
   }
+};
+
+export const venueLayoutApi = {
+  getLayout: (venueId) => apiClient.get(`${API_BASE}/venues/${venueId}/layout`),
 };
 
 // ============================================
