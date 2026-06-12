@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventImageUrl } from '../utils/imageUtils';
+import { downloadTicketPdf } from '../lib/ticketPdf';
 
 const { Title, Text } = Typography;
 
@@ -17,6 +18,15 @@ export default function MisEntradas() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handleDownloadPdf = async (t) => {
+    try {
+      await downloadTicketPdf(t);
+    } catch (e) {
+      console.error('Error generando PDF:', e);
+      message.error('No se pudo generar el PDF');
+    }
+  };
 
   // Cargar tickets del usuario
   useEffect(() => {
@@ -484,7 +494,7 @@ export default function MisEntradas() {
                           Lugar Asegurado
                         </Text>
                         <Link to={`/ticket/${linkId}`} style={{ width: '100%' }}>
-                          <Button 
+                          <Button
                             size="middle"
                             block
                             style={{ borderRadius: 8 }}
@@ -492,6 +502,15 @@ export default function MisEntradas() {
                             Ver Detalle
                           </Button>
                         </Link>
+                        <Button
+                          size="middle"
+                          block
+                          icon={<DownloadOutlined />}
+                          style={{ borderRadius: 8, marginTop: 8 }}
+                          onClick={() => handleDownloadPdf(ticket)}
+                        >
+                          PDF
+                        </Button>
                       </>
                     ) : isTooEarlyForQR ? (
                       // 🔒 ESTADO: Faltan más de 48hs
@@ -513,7 +532,7 @@ export default function MisEntradas() {
                           Se habilitará 48hs antes del evento
                         </Text>
                         <Link to={`/ticket/${linkId}`} style={{ width: '100%' }}>
-                          <Button 
+                          <Button
                             size="middle"
                             block
                             style={{ borderRadius: 8 }}
@@ -521,6 +540,15 @@ export default function MisEntradas() {
                             Ver Detalle
                           </Button>
                         </Link>
+                        <Button
+                          size="middle"
+                          block
+                          icon={<DownloadOutlined />}
+                          style={{ borderRadius: 8, marginTop: 8 }}
+                          onClick={() => handleDownloadPdf(ticket)}
+                        >
+                          PDF
+                        </Button>
                       </>
                     ) : (
                       <>
@@ -541,6 +569,16 @@ export default function MisEntradas() {
                             Ver QR
                           </Button>
                         </Link>
+                        <Button
+                          size="middle"
+                          block
+                          icon={<DownloadOutlined />}
+                          disabled={status === 'CANCELLED'}
+                          style={{ borderRadius: 8, marginTop: 8 }}
+                          onClick={() => handleDownloadPdf(ticket)}
+                        >
+                          PDF
+                        </Button>
                         <Text type="secondary" style={{ fontSize: 12, marginTop: 12 }}>
                           #{ticket.ticket_number?.slice(-6) || '------'}
                         </Text>

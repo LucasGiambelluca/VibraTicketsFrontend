@@ -22,38 +22,29 @@ const GoogleAuthButton = ({ onSuccess, onError, style, text = "Continuar con Goo
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      console.log('✅ Token de Google recibido');
-      
-      // Enviar el token al backend para validación
+      // Enviar el token al backend; la sesión queda en cookie httpOnly
+      // (mismo flujo que el login con contraseña — nada en localStorage)
       const response = await authApi.googleLogin({
         token: credentialResponse.credential
       });
 
-      if (response.success || response.token) {
-        const { token, user } = response;
-        
-        // Guardar en localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        // Actualizar estado global
-        if (setUser) {
-          setUser(user);
-        }
-        
-        message.success(`¡Bienvenido ${user.name || user.email}!`);
-        
-        // Callback personalizado o navegación por defecto
-        if (onSuccess) {
-          onSuccess(user);
-        } else {
-          // Redirigir según el rol
-          if (user.role === 'ADMIN' || user.role === 'ORGANIZER') {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
-        }
+      const user = response?.data?.user || response?.user;
+      if (!user) {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      // Actualizar estado global
+      if (setUser) {
+        setUser(user);
+      }
+
+      message.success(`¡Bienvenido ${user.name || user.email}!`);
+
+      // Callback personalizado o navegación por defecto
+      if (onSuccess) {
+        onSuccess(user);
+      } else {
+        navigate('/');
       }
     } catch (error) {
       console.error('❌ Error en autenticación con Google:', error);
