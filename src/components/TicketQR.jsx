@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { Spin, Alert, Progress, Space, Button, Typography } from 'antd';
+import { LockOutlined } from '@ant-design/icons';
 import { ticketsApi } from '../services/apiService';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const { Text } = Typography;
 
@@ -9,6 +12,10 @@ export default function TicketQR({ ticketId, ticketNumber }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // 403 QRNotYetAvailable: el candado server-side de 48hs sigue activo
+  // (ver controllers/tickets.controller.js#getDynamicQR). No es un error de
+  // conexión, es el estado esperado antes de la ventana de 48hs.
+  const [locked, setLocked] = useState(null); // { availableFrom } | null
   const [ttl, setTtl] = useState(0);
   const [totalTtl, setTotalTtl] = useState(30);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -19,18 +26,24 @@ export default function TicketQR({ ticketId, ticketNumber }) {
       setLoading(true);
       // Usar el ID numérico del ticket (ticketId) para la API
       const response = await ticketsApi.getDynamicQR(ticketId);
-      
+
       if (response.success || response.token) {
         setToken(response.token);
         setTtl(response.ttl || 30);
         setTotalTtl(30);
         setError(null);
+        setLocked(null);
       } else {
         throw new Error('No se pudo obtener el código seguro');
       }
     } catch (err) {
-      console.error("Error fetching QR token", err);
-      setError(err.message || 'Error de conexión');
+      if (err.status === 403 && err.code === 'QRNotYetAvailable') {
+        setLocked({ availableFrom: err.response?.availableFrom || null });
+        setError(null);
+      } else {
+        console.error("Error fetching QR token", err);
+        setError(err.message || 'Error de conexión');
+      }
     } finally {
       setLoading(false);
     }
@@ -58,6 +71,28 @@ export default function TicketQR({ ticketId, ticketNumber }) {
 
     return () => clearInterval(countdown);
   }, []);
+
+  if (locked) {
+    const dateLabel = locked.availableFrom
+      ? format(new Date(locked.availableFrom), "d 'de' MMMM 'a las' HH:mm'hs'", { locale: es })
+      : null;
+    return (
+      <div style={{ textAlign: 'center', padding: 20 }}>
+        <Alert
+          message="QR protegido"
+          description={
+            <Text type="secondary">
+              Por seguridad, tu código QR se habilita 48 horas antes del evento
+              {dateLabel ? ` (disponible desde el ${dateLabel})` : ''}.
+            </Text>
+          }
+          type="info"
+          showIcon
+          icon={<LockOutlined />}
+        />
+      </div>
+    );
+  }
 
   if (error) {
     return (

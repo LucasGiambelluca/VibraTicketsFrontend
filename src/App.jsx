@@ -25,7 +25,8 @@ import ShowDetail from "./pages/ShowDetail";
 import Queue from "./pages/Queue";
 import SeatSelection from "./pages/SeatSelection";
 import Checkout from "./pages/Checkout";
-import CheckoutNew from "./pages/CheckoutNew";
+// CheckoutNew: desconectado (ver ruta más abajo) — no se borra el archivo
+// por si se retoma este flujo alternativo de checkout.
 import OrderSuccess from "./pages/OrderSuccess";
 import MisEntradas from "./pages/MisEntradas";
 import MisOrdenes from "./pages/MisOrdenes";
@@ -56,6 +57,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
 import PaymentPending from "./pages/PaymentPending";
 import NotFound from "./pages/NotFound";
+import UIPreview from "./pages/UIPreview";
 
 const { Content } = Layout;
 
@@ -116,19 +118,22 @@ export default function App() {
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#000000', // Negro premium
+          colorPrimary: '#007AFF', // Figma azul primario
+          colorSuccess: '#00B69B', // Figma teal
           fontFamily: 'Inter, sans-serif',
           borderRadius: 8,
-          colorText: '#1f1f1f',
+          colorText: '#202224',
           colorBgBase: '#ffffff',
         },
         components: {
           Button: {
             borderRadius: 8,
             controlHeight: 44, // Botones más altos
-            boxShadow: '0 4px 14px 0 rgba(0,0,0,0.1)', // Sombra sutil
+            boxShadow: '0 4px 14px 0 rgba(0,122,255,0.18)', // Sombra azul sutil
             fontWeight: 600,
-            colorPrimary: '#000000',
+            colorPrimary: '#007AFF',
+            colorPrimaryHover: '#0A6CE0',
+            colorPrimaryActive: '#3742FA',
             algorithm: true, // Habilitar algoritmos derivados
           },
           Card: {
@@ -138,8 +143,8 @@ export default function App() {
           Input: {
             controlHeight: 44,
             borderRadius: 8,
-            activeBorderColor: '#000000',
-            hoverBorderColor: '#404040',
+            activeBorderColor: '#007AFF',
+            hoverBorderColor: '#80BCFF',
           },
           Select: {
             controlHeight: 44,
@@ -226,21 +231,19 @@ export default function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/checkout/success" 
+            <Route
+              path="/checkout/success"
               element={
                 <PaymentSuccess />
-              } 
+              }
             />
-            <Route 
-              path="/checkout/:holdId" 
-              element={
-                <ProtectedRoute>
-                  <CheckoutNew />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
+            {/* Ruta muerta eliminada: "/checkout/:holdId" (CheckoutNew) tenía el
+                mismo shape de path que "/checkout/:orderId" (arriba, Checkout) —
+                react-router siempre matcheaba la primera definida, por lo que
+                CheckoutNew era inalcanzable. Se desconecta la ruta y el import;
+                el archivo src/pages/CheckoutNew.jsx queda intacto por si se
+                retoma este flujo. */}
+            <Route
               path="/order-success/:orderId" 
               element={
                 <ProtectedRoute>
@@ -319,6 +322,9 @@ export default function App() {
               Para acceder al panel de administración, utilice la aplicación ticketera-admin.
             */}
             
+            {/* Preview UI (solo dev) - pantallas Figma aisladas */}
+            <Route path="/ui-preview" element={<UIPreview />} />
+
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

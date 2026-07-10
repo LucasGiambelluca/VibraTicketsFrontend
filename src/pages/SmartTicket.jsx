@@ -132,7 +132,12 @@ export default function SmartTicket() {
         seatNumber: seat
       }),
       status: ticketData.status || 'ISSUED',
-      availability_status: ticketData.availability_status || 'available' // Default to available if not present
+      // Fail-closed: si no viene `availability_status` (getTicketByNumber en su
+      // rama "todavía no disponible" manda `qrAvailable:false` en vez de este
+      // campo), NO asumir 'available' — eso mostraba el QR (vía TicketQR, que
+      // intentaba pedir el TOTP) aunque el candado de 48hs siguiera activo.
+      availability_status: ticketData.availability_status
+        || (ticketData.qrAvailable === false ? 'pending' : (ticketData.qrAvailable === true ? 'available' : 'pending'))
     };
 
     return formatted;
@@ -384,7 +389,7 @@ export default function SmartTicket() {
                         ¡Lugar Asegurado!
                       </Title>
                       <Text type="secondary" style={{ textAlign: 'center', marginBottom: 16 }}>
-                        Por seguridad, tu código QR estará disponible <strong>24hs antes del evento</strong>.
+                        Por seguridad, tu código QR estará disponible <strong>48hs antes del evento</strong>.
                       </Text>
                       <div style={{ background: 'rgba(82, 196, 26, 0.1)', padding: '8px 16px', borderRadius: 8 }}>
                          <Text style={{ color: '#389e0d', fontSize: 12 }}>
