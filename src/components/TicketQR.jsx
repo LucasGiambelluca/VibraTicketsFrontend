@@ -87,8 +87,14 @@ export default function TicketQR({ ticketId, ticketNumber }) {
     );
   }
 
-  // El contenido del QR es un JSON string con la estructura solicitada
+  // El contenido del QR es un JSON string con la estructura solicitada.
+  // ticketId es imprescindible: controllers/validation.controller.js sólo
+  // entra a la rama de validación dinámica (TOTP) si el payload trae
+  // `token` + `ticketId` (o, como red de seguridad, `ticketNumber`). Sin
+  // ticketId el QR de la app caía a la rama GA legacy y la puerta devolvía
+  // TICKET_NOT_FOUND para cualquier ticket de asiento.
   const qrData = JSON.stringify({
+    ticketId: ticketId,
     ticketNumber: ticketNumber,
     token: token,
     timestamp: Date.now()
