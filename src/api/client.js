@@ -33,7 +33,11 @@ class ApiClient {
         
         try {
           errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
+          // Priorizar el mensaje humano (errorData.message) sobre el código de
+          // error (errorData.error, ej: "DNIRequired") para no mostrarle al
+          // usuario códigos crípticos en toasts. El código sigue disponible
+          // como error.code para los checks programáticos.
+          errorMessage = errorData.message || errorData.error || errorMessage;
         } catch {
           // Si no se puede parsear el JSON, usar el mensaje por defecto
         }
@@ -53,6 +57,7 @@ class ApiClient {
         const error = new Error(errorMessage);
         error.status = response.status;
         error.response = errorData;
+        error.code = errorData?.error; // Código de error para checks programáticos (ej: 'DNIRequired')
         throw error;
       }
 

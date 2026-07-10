@@ -2,15 +2,46 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
+ * Placeholder local (sin depender de hosts externos como via.placeholder.com,
+ * que ya no está disponible de forma confiable). SVG inline con un ícono de
+ * ticket simple sobre un degradado, embebido como data URI.
+ * @param {string} label - Texto a mostrar dentro del placeholder
+ * @returns {string} data URI con el SVG del placeholder
+ */
+export const getLocalImagePlaceholder = (label = 'Evento') => {
+  const safeLabel = String(label).slice(0, 40);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#667eea"/>
+        <stop offset="100%" stop-color="#764ba2"/>
+      </linearGradient>
+    </defs>
+    <rect width="400" height="300" fill="url(#g)"/>
+    <g fill="#ffffff" opacity="0.85">
+      <path d="M170 120h60a10 10 0 0 1 10 10v6a12 12 0 0 0 0 24v6a10 10 0 0 1-10 10h-60a10 10 0 0 1-10-10v-6a12 12 0 0 0 0-24v-6a10 10 0 0 1 10-10z" fill="none" stroke="#ffffff" stroke-width="3"/>
+    </g>
+    <text x="200" y="205" font-family="Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="middle" opacity="0.9">${safeLabel.replace(/[<&>]/g, '')}</text>
+  </svg>`;
+  // encodeURIComponent no escapa "(" ")" "'" "!" "*" — hay que hacerlo a mano
+  // porque este data URI se interpola sin comillas dentro de CSS url(...) en
+  // varios componentes, y un paréntesis literal ahí corta la URL a la mitad.
+  const encoded = encodeURIComponent(svg)
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29');
+  return `data:image/svg+xml;utf8,${encoded}`;
+};
+
+/**
  * Obtiene la URL completa de una imagen
  * @param {string} imageUrl - URL de la imagen (puede ser relativa o absoluta)
  * @param {string} placeholder - Texto para el placeholder si no hay imagen
  * @returns {string} URL completa de la imagen
  */
 export const getImageUrl = (imageUrl, placeholder = 'Image') => {
-  // Si no hay imagen, devolver placeholder
+  // Si no hay imagen, devolver placeholder local (sin hosts externos)
   if (!imageUrl) {
-    return `https://via.placeholder.com/300x300/667eea/ffffff?text=${encodeURIComponent(placeholder)}`;
+    return getLocalImagePlaceholder(placeholder);
   }
   
   // Si ya es URL completa (http/https), usarla tal cual
@@ -66,5 +97,6 @@ export const getEventBannerUrl = (event) => {
 export default {
   getImageUrl,
   getEventImageUrl,
-  getEventBannerUrl
+  getEventBannerUrl,
+  getLocalImagePlaceholder
 };

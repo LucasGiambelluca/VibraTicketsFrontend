@@ -6,7 +6,7 @@ import { usersApi, testPaymentsApi } from '../services/apiService';
 import { useAuth } from '../hooks/useAuth';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getEventImageUrl } from '../utils/imageUtils';
+import { getEventImageUrl, getImageUrl } from '../utils/imageUtils';
 import { downloadTicketPdf } from '../lib/ticketPdf';
 
 const { Title, Text } = Typography;
@@ -177,14 +177,14 @@ export default function MisEntradas() {
 
     // Filtro por estado
     if (filter === 'issued' && ticket.status !== 'ISSUED') return false;
-    if (filter === 'redeemed' && ticket.status !== 'REDEEMED') return false;
+    if (filter === 'redeemed' && !['REDEEMED', 'SCANNED'].includes(ticket.status)) return false;
     if (filter === 'cancelled' && ticket.status !== 'CANCELLED') return false;
-    
+
     // Filtro por búsqueda
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       const eventName = (ticket.event_name || ticket.eventName || '').toLowerCase();
-      const venue = (ticket.venue || '').toLowerCase();
+      const venue = (ticket.venue_name || ticket.venue || '').toLowerCase();
       const sector = (ticket.sector || '').toLowerCase();
       
       if (!eventName.includes(search) && !venue.includes(search) && !sector.includes(search)) {
@@ -198,7 +198,8 @@ export default function MisEntradas() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'ISSUED': return '#52c41a';
-      case 'REDEEMED': return '#1890ff';
+      case 'REDEEMED':
+      case 'SCANNED': return '#1890ff';
       case 'CANCELLED': return '#ff4d4f';
       default: return '#d9d9d9';
     }
@@ -207,7 +208,8 @@ export default function MisEntradas() {
   const getStatusText = (status) => {
     switch (status) {
       case 'ISSUED': return 'Activo';
-      case 'REDEEMED': return 'Usado';
+      case 'REDEEMED':
+      case 'SCANNED': return 'Usado';
       case 'CANCELLED': return 'Cancelado';
       default: return status;
     }
@@ -353,7 +355,7 @@ export default function MisEntradas() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {filteredTickets.map((ticket) => {
               const eventName = ticket.event_name || ticket.eventName || 'Evento';
-              const venue = ticket.venue || 'Venue';
+              const venue = ticket.venue_name || ticket.venue || 'Venue';
               const showDateStr = ticket.show_date || ticket.showDate;
               const sector = ticket.sector || 'General';
               const seatNumber = ticket.seat_number || ticket.seatNumber || '';
@@ -375,11 +377,9 @@ export default function MisEntradas() {
               let imageUrl;
               if (ticket.event && typeof ticket.event === 'object') {
                 imageUrl = getEventImageUrl(ticket.event, 'horizontal');
-              } else if (ticket.event_image_url || ticket.eventImageUrl) {
-                const imgUrl = ticket.event_image_url || ticket.eventImageUrl;
-                imageUrl = imgUrl.startsWith('http') ? imgUrl : `${import.meta.env.VITE_API_URL || 'https://vibratickets.online'}${imgUrl}`;
               } else {
-                imageUrl = `https://via.placeholder.com/400x200/667eea/ffffff?text=${encodeURIComponent(eventName)}`;
+                const imgUrl = ticket.event_image || ticket.event_image_url || ticket.eventImageUrl;
+                imageUrl = getImageUrl(imgUrl, eventName);
               }
 
               const linkId = ticket.ticket_number || ticket.ticketNumber || ticket.id;
@@ -580,7 +580,7 @@ export default function MisEntradas() {
                           PDF
                         </Button>
                         <Text type="secondary" style={{ fontSize: 12, marginTop: 12 }}>
-                          #{ticket.ticket_number?.slice(-6) || '------'}
+                          #{(ticket.ticketNumber || ticket.ticket_number)?.slice(-6) || '------'}
                         </Text>
                       </>
                     )}

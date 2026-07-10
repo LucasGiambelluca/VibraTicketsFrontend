@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Button, message } from 'antd';
+import { Button, message, notification } from 'antd';
 import { ShoppingCartOutlined, LockOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { paymentsApi, ordersApi } from '../services/apiService';
 
 /**
@@ -30,7 +31,8 @@ export default function MercadoPagoButton({
   block = true 
 }) {
   const [loading, setLoading] = useState(false);
-  
+  const navigate = useNavigate();
+
   // Sync loading state with parent
   React.useEffect(() => {
     if (onLoadingChange) onLoadingChange(loading);
@@ -233,6 +235,39 @@ export default function MercadoPagoButton({
     } catch (error) {
       loadingMessage();
       console.error('Error en proceso de pago:', error);
+
+      // Caso especial: falta el DNI en el perfil (backend responde 400 DNIRequired).
+      // Antes se mostraba el código crudo "DNIRequired" como si fuera el mensaje;
+      // ahora mostramos un mensaje claro con acción directa al perfil.
+      const isDniRequired = error.code === 'DNIRequired' ||
+        error.response?.error === 'DNIRequired' ||
+        error.response?.action === 'redirect_to_profile';
+
+      if (isDniRequired) {
+        notification.error({
+          message: 'Falta completar tu DNI',
+          description: error.response?.message || 'Debes completar tu DNI en tu perfil antes de realizar la compra.',
+          duration: 0,
+          btn: (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => {
+                notification.destroy();
+                navigate('/profile');
+              }}
+            >
+              Completar mi DNI
+            </Button>
+          )
+        });
+        if (onError) onError(error);
+        setLoading(false);
+        try {
+          sessionStorage.removeItem('mp_redirecting');
+        } catch {}
+        return;
+      }
 
       let errorMessage = 'Error al procesar el pago. Por favor, intenta nuevamente.';
 

@@ -177,11 +177,16 @@ export default function Checkout() {
   const { subtotal, serviceCharge, discountAmount, total } = useMemo(() => {
     if (!holdData) return { subtotal: 0, serviceCharge: 0, discountAmount: 0, total: 0 };
 
-    const totalCents = holdData.totalCents || holdData.total_cents || 0;
+    const totalCents = Number(holdData.totalCents || holdData.total_cents || 0);
     if (!totalCents) return { subtotal: 0, serviceCharge: 0, discountAmount: 0, total: 0 };
 
+    // Trabajar en centavos como el backend MP (Math.round(subtotalCents * pct)),
+    // si no, redondear a pesos enteros borraba cargos chicos (ej 0,45 -> 0) y el
+    // total del front no coincidía con lo que cobra MercadoPago.
+    const SERVICE_PCT = 0.15;
+    const serviceChargeCents = Math.round(totalCents * SERVICE_PCT);
     const subtotalCalc = totalCents / 100;
-    const serviceChargeCalc = Math.round(subtotalCalc * 0.15); 
+    const serviceChargeCalc = serviceChargeCents / 100;
     const discountAmountCalc = appliedDiscount?.discountAmount || 0;
     const totalCalc = (subtotalCalc + serviceChargeCalc) - discountAmountCalc;
 
@@ -208,6 +213,16 @@ export default function Checkout() {
 
   const handlePaymentError = (error) => {
     console.error('❌ Error en pago:', error);
+
+    // DNIRequired: MercadoPagoButton ya mostró la notificación accionable
+    // ("Completar mi DNI" → /profile). No mostrar además el mensaje genérico.
+    const isDniRequired = error.code === 'DNIRequired' ||
+      error.response?.error === 'DNIRequired' ||
+      error.response?.action === 'redirect_to_profile';
+    if (isDniRequired) {
+      return;
+    }
+
     if (error.response?.status === 401 || error.status === 401) {
       setTimeout(() => navigate('/login'), 2000);
     } else if (error.response?.status === 409 || error.status === 409) {

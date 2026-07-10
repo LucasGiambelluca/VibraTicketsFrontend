@@ -10,7 +10,7 @@ import { ticketsApi } from '../services/apiService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import logo from '../assets/VibraTicketLogo2.png';
-import { getEventImageUrl } from '../utils/imageUtils';
+import { getEventImageUrl, getImageUrl } from '../utils/imageUtils';
 
 const { Title, Text } = Typography;
 
@@ -93,7 +93,7 @@ export default function SmartTicket() {
     if (!ticketData) return null;
 
     // Extraer datos del show
-    const showDate = ticketData.show?.startsAt || ticketData.starts_at || ticketData.show_starts_at;
+    const showDate = ticketData.showDate || ticketData.show?.startsAt || ticketData.starts_at || ticketData.show_starts_at;
     const formattedDate = showDate ? format(new Date(showDate), "EEEE d 'de' MMMM", { locale: es }) : 'Fecha por confirmar';
     const formattedTime = showDate ? format(new Date(showDate), 'HH:mm', { locale: es }) + ' HS' : '';
     
@@ -283,7 +283,9 @@ export default function SmartTicket() {
           <div style={{
             height: 220,
             background: `linear-gradient(rgba(102, 126, 234, 0.85), rgba(118, 75, 162, 0.9)), url(${
-              ticketData.event ? getEventImageUrl(ticketData.event) : ''
+              ticketData.event
+                ? getEventImageUrl(ticketData.event)
+                : getImageUrl(ticketData.event_image, formattedTicket?.event)
             }) center/cover no-repeat`,
             display: 'flex',
             flexDirection: 'column',
